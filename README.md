@@ -1,4 +1,4 @@
-# Grid Duel
+# Joseon Duel
 
 A small turn-based tactics game for the browser. Open `index.html` — no build step.
 
