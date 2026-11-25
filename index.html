@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grid Duel</title>
+<style>
+  :root { --bg:#14161c; --panel:#1d212b; --line:#2e3442; --txt:#e8eaf0; --dim:#8b93a7;
+          --you:#4aa3ff; --fa:#ff5c6c; --fb:#ffa24a; --ok:#4ade80; --trk:#ffd84a; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--txt); font-family:system-ui,sans-serif;
+         display:flex; flex-direction:column; align-items:center; padding:16px; gap:12px; }
+  h1 { margin:0; font-size:22px; }
+  #top { display:flex; gap:10px; width:100%; max-width:760px; }
+  .side { flex:1; background:var(--panel); border-radius:10px; padding:10px 12px; }
+  .side h2 { margin:0 0 6px; font-size:14px; }
+  .side.p h2 { color:var(--you); } .side.a h2 { color:var(--fa); } .side.b h2 { color:var(--fb); }
+  .hp { height:10px; background:#0006; border-radius:5px; overflow:hidden; }
+  .hp i { display:block; height:100%; transition:width .4s; }
+  .side.p .hp i { background:var(--you); } .side.a .hp i { background:var(--fa); } .side.b .hp i { background:var(--fb); }
+  .side.dead { opacity:.4; }
+  .meta { font-size:12px; color:var(--dim); margin-top:4px; }
+  #main { display:flex; gap:16px; width:100%; max-width:760px; flex-wrap:wrap; justify-content:center; }
+  #boardwrap { position:relative; } #fx { position:absolute; inset:0; pointer-events:none; overflow:visible; z-index:5; }
+  .fx-swing { position:absolute; width:0; height:0; }
+  .fx-swing svg { position:absolute; left:-11px; top:-58px; filter:drop-shadow(0 0 5px var(--c)); overflow:visible; }
+  .fx-swing .arc { position:absolute; left:-34px; top:-34px; width:68px; height:68px; border-radius:50%; border:5px solid transparent;
+                   border-top-color:var(--c); opacity:.7; filter:blur(.6px); }
+  .fx-bow { position:absolute; width:0; height:0; }
+  .fx-bow svg { position:absolute; left:-20px; top:-20px; overflow:visible; filter:drop-shadow(0 0 4px var(--c)); }
+  .fx-arrow { position:absolute; left:-16px; top:-2px; width:32px; height:4px; background:var(--c); border-radius:2px; opacity:0; box-shadow:0 0 6px var(--c); }
+  .fx-arrow::after { content:''; position:absolute; right:-7px; top:-5px; border-left:10px solid var(--c); border-top:7px solid transparent; border-bottom:7px solid transparent; }
+  .fx-spark { position:absolute; font-size:40px; transform:translate(-50%,-50%); animation:spark .6s ease-out forwards; }
+  @keyframes spark { 0%{transform:translate(-50%,-50%) scale(.2);opacity:0} 30%{transform:translate(-50%,-50%) scale(1.3);opacity:1} 100%{transform:translate(-50%,-50%) scale(1);opacity:0} }
+  #board { display:grid; grid-template-columns:repeat(3,110px); grid-template-rows:repeat(3,110px); gap:6px; }
+  .cell { position:relative; background:var(--panel); border:2px solid var(--line); border-radius:10px;
+          font-size:28px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; align-content:center; gap:2px; color:inherit; padding:0; cursor:default; }
+  .cell.can { border-color:var(--ok); cursor:pointer; background:#1f2a26; }
+  .cell.can:hover { background:#27382f; }
+  .cell.track { border-color:var(--trk); background:#38321a; }
+  .cell.track::after { content:attr(data-n); position:absolute; left:50%; bottom:4px; transform:translateX(-50%);
+                       font-size:12px; font-weight:700; color:var(--trk); }
+  .cell .name { position:absolute; left:6px; top:3px; font-size:11px; color:var(--dim); }
+  .cell .cost { position:absolute; right:6px; bottom:3px; font-size:13px; color:var(--ok); font-weight:700; }
+  .cell.flash { animation:fl .5s; }
+  @keyframes fl { 0%{background:#ff5c6c88} 100%{background:var(--panel)} }
+  .badges { position:absolute; right:4px; top:2px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:2px; max-width:84px; }
+  .badges .bdg { font-size:11px; padding:1px 4px; border-radius:6px; font-weight:700; color:#10131a; }
+  .badges .bdg.p { background:var(--you); } .badges .bdg.a { background:var(--fa); } .badges .bdg.b { background:var(--fb); }
+  .panel { flex:1; min-width:250px; max-width:330px; display:flex; flex-direction:column; gap:10px; }
+  .box { background:var(--panel); border-radius:10px; padding:10px 12px; }
+  .box h3 { margin:0 0 6px; font-size:13px; color:var(--dim); font-weight:600; }
+  .plan { margin:0 0 4px; padding:0; list-style:none; font-size:13px; line-height:1.55; }
+  .plan li b { display:inline-block; min-width:20px; color:var(--dim); font-weight:600; }
+  .plan:empty::after { content:"(nothing yet)"; color:var(--dim); }
+  .who { font-size:12px; font-weight:700; margin-top:4px; } .who.a { color:var(--fa); } .who.b { color:var(--fb); }
+  #pick { margin-top:8px; font-size:13px; } #pick .btns { margin-top:6px; }
+  .pips { font-size:18px; letter-spacing:3px; }
+  .btns { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  button.act, button.sm { background:#2a3040; color:var(--txt); border:2px solid transparent; border-radius:8px; padding:8px; font-size:14px; cursor:pointer; }
+  button.act:hover:not(:disabled), button.sm:hover:not(:disabled) { background:#343b50; }
+  button.act.sel { border-color:var(--ok); }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  #fight { background:var(--you); color:#06101c; font-weight:700; border:0; border-radius:8px; padding:10px; font-size:15px; cursor:pointer; }
+  #fight:disabled { background:#2a3040; color:var(--txt); }
+  #log { font-size:13px; line-height:1.5; max-height:150px; overflow:auto; color:#c9cfdd; }
+  #msg { font-weight:700; min-height:22px; text-align:center; }
+  details { max-width:760px; width:100%; font-size:13px; color:var(--dim); }
+  details li { margin:2px 0; }
+</style>
+</head>
+<body>
+<h1>Grid Duel</h1>
+
+<div id="top"></div>
+<div id="msg"></div>
+
+<div id="main">
+  <div id="boardwrap"><div id="board"></div><div id="fx"></div></div>
+  <div class="panel">
+    <div class="box">
+      <h3>ENEMY PLANS (revealed)</h3>
+      <div id="enemyList"></div>
+    </div>
+    <div class="box">
+      <h3>YOUR PLAN — AP left <span class="pips" id="pips"></span></h3>
+      <ul class="plan" id="myList"></ul>
+      <div id="pick"></div>
+      <div class="btns" style="margin-top:8px">
+        <button class="act" data-a="move">👣 Move (1)</button>
+        <button class="act" data-a="melee">⚔️ Melee (1)</button>
+        <button class="act" data-a="ranged">🏹 Ranged (2+)</button>
+        <button class="act" data-a="guard">🛡️ Guard (1)</button>
+        <button class="sm" id="undo">↩ Undo</button>
+        <button class="sm" id="clear">✕ Clear</button>
+      </div>
+    </div>
+    <button id="fight">Fight!</button>
+  </div>
+</div>
+
+<div class="box" style="max-width:760px;width:100%"><h3>BATTLE LOG</h3><div id="log"></div></div>
+
+<details>
+  <summary>Rules (as implemented)</summary>
+  <ul>
+    <li>You (6 HP) face two enemies (10 HP each). Defeat both to win; you lose at 0 HP.</li>
+    <li>Each round everyone plans up to 3 AP worth of actions. The enemies plan first and show everything.</li>
+    <li>The battle runs in steps: every unit's 1st action resolves together, then every 2nd action, then every 3rd. Within a step: guards, then moves, then attacks.</li>
+    <li>Move: 1 AP, one square in any direction, diagonals included. Guard: 1 AP, blocks one hit landing on the same step it is played (it ends with that step).</li>
+    <li>Melee: 1 AP, hits any opponent in your own square.</li>
+    <li>Ranged: 1 + n AP, where n = squares to the target (diagonals count as 1). It can't target your own square, so the cheapest is 2 AP (neighbouring square) and the far side costs 3. Hover a target to see the highlighted track and distance. It hits any opponent standing on the target square when it fires. Cost is measured from where you will be at that point of your plan.</li>
+    <li>You can't shoot the unit sharing your square (a ranged target can never be your own square). To hit it, melee it, or step to a neighbouring square and shoot from there. Shooting someone in a different square is always allowed. A shot is locked in when planned: if someone steps onto the shooter's square, the shot still goes to its target square.</li>
+    <li>Everyone can share a square. If you melee on the same step as an enemy who is meleeing you in your shared square, the two strikes cancel. A clash takes priority, so you don't get to choose a target for that melee.</li>
+    <li>The enemies fight differently. Enemy A is a Melee Chaser: it chases you and prefers melee. Enemy B is a Ranged Sniper: it keeps its distance and shoots, and guards or backs away if you get close. Either will go all-in on an attack that could finish you off.</li>
+    <li>An attack hits only one unit. If several enemies will stand on the square you attack, you choose which one to hit (the game asks when you plan it).</li>
+    <li>Each hit deals 2 damage. Enemies never hurt each other.</li>
+  </ul>
+</details>
+
+<script>
+const AP = 3, HP_P = 6, HP_E = 10, DMG = 2;
+const ICON = { move:'👣', melee:'⚔️', ranged:'🏹', guard:'🛡️' };
+const UNITS = { p:{name:'You', tok:'🧑'}, a:{name:'Enemy A', tok:'👾'}, b:{name:'Enemy B', tok:'👹'} };
+const STYLE = {
+  a:{ label:'Melee Chaser', desc:'chases you down and melees' },
+  b:{ label:'Ranged Sniper',  desc:'keeps its distance, shoots; guards or flees if you close in' },
+};
+const ALL = ['p','a','b'], ENEMIES = ['a','b'];
+const xy = i => ({ x:i%3, y:Math.floor(i/3) });
+const cname = i => 'ABC'[xy(i).x] + (xy(i).y+1);
+const dist = (a,b) => { const A=xy(a), B=xy(b); return Math.max(Math.abs(A.x-B.x), Math.abs(A.y-B.y)); };
+const adj = (a,b) => dist(a,b) === 1;
+const rnd = n => Math.floor(Math.random()*n);
+// Squares passed through from a to b, ending on b (one step at a time, diagonals allowed).
+function track(a, b){
+  const A = xy(a), B = xy(b), out = []; let x = A.x, y = A.y;
+  while (x!==B.x || y!==B.y){ x += Math.sign(B.x-x); y += Math.sign(B.y-y); out.push(y*3+x); }
+  return out;
+}
+
+let S, myPlan, foePlans, mode, phase, pending = null, round = 1;   // phase: plan | battle | over
+
+const projPos = (plan, pos) => { for (const a of plan) if (a.t==='move') pos = a.to; return pos; };
+const left = plan => AP - plan.reduce((s,a)=>s+a.cost, 0);
+const mk = (t, extra={}) => ({ t, cost:1, ...extra });
+const mkRanged = (from, at) => mk('ranged', { at, cost:1 + dist(from, at), from });
+const tgtTag = a => a.tgt ? ` [${UNITS[a.tgt].name}]` : '';
+const describe = a => a.t==='move' ? `Move → ${cname(a.to)}`
+  : a.t==='melee' ? 'Melee (own square)' + (a.clash ? ' ⚡clash' : tgtTag(a))
+  : a.t==='ranged' ? `Ranged → ${cname(a.at)} (${a.cost} AP)` + tgtTag(a) : 'Guard';
+const alive = (s,k) => s[k].hp > 0;
+
+/* ---------- simulation (shared by battle + AI) ---------- */
+function clone(s){ const o = {}; for (const k in s) o[k] = {...s[k]}; return o; }
+function simulate(start, plans){
+  const s = clone(start), steps = [];
+  for (let i=0; i<AP; i++){
+    const fire = {}, log = [], hitCells = [], trail = [];
+    for (const k of ALL) if (alive(s,k) && plans[k]?.[i]) fire[k] = plans[k][i];
+    if (!Object.keys(fire).length) continue;
+    for (const k in fire) if (fire[k].t==='guard'){ s[k].g = true; log.push(`${UNITS[k].name} guards.`); }
+    for (const k in fire) if (fire[k].t==='move'){ s[k].pos = fire[k].to; log.push(`${UNITS[k].name} moves to ${cname(fire[k].to)}.`); }
+    const mid = clone(s);
+    const cancelled = new Set();
+    if (fire.p?.t==='melee') for (const e of ENEMIES)             // melee clash beats target choice: every meleeing enemy in your square cancels with you
+      if (fire[e]?.t==='melee' && alive(s,e) && s[e].pos===s.p.pos){
+        cancelled.add('p'); cancelled.add(e); hitCells.push(s.p.pos);
+        log.push(`${UNITS[e].name} and You clash at ${cname(s.p.pos)} — both melee strikes cancel out!`);
+      }
+    const hits = {};
+    for (const k in fire){
+      const act = fire[k];
+      if ((act.t!=='melee' && act.t!=='ranged') || cancelled.has(k)) continue;
+      if (act.t==='ranged' && act.at===s[k].pos) continue;   // a ranged target can never be the shooter's own square
+      const cell = act.t==='melee' ? s[k].pos : act.at, foes = k==='p' ? ENEMIES : ['p'];
+      hitCells.push(cell);
+      if (act.t==='ranged') trail.push(...track(s[k].pos, cell));
+      const verb = act.t==='melee' ? 'strikes' : 'shoots at';
+      let victims = foes.filter(v => alive(s,v) && s[v].pos===cell);
+      victims = act.tgt ? victims.filter(v => v===act.tgt) : victims.slice(0,1);   // one target per attack
+      if (victims.length){ victims.forEach(v => hits[v] = (hits[v]||0) + 1);
+        log.push(`${UNITS[k].name} ${verb} ${cname(cell)} — hit ${victims.map(v=>UNITS[v].name).join(' & ')}!`); }
+      else log.push(`${UNITS[k].name} ${verb} ${cname(cell)} — miss.`);
+    }
+    for (const v in hits){
+      let n = hits[v];
+      if (s[v].g){ s[v].g = false; n--; log.push(`${UNITS[v].name}'s guard blocks a hit.`); }
+      if (n > 0){ s[v].hp = Math.max(0, s[v].hp - n*DMG); log.push(`${UNITS[v].name} takes ${n*DMG} damage${s[v].hp<=0?' and is defeated!':'.'}`); }
+    }
+    steps.push({ i, fire, log, mid, snap:clone(s), hitCells, trail, clash: cancelled.size ? s.p.pos : null });
+    for (const k of ALL) s[k].g = false;   // guard only covers the step it was played in
+    if (!alive(s,'p') || ENEMIES.every(e => !alive(s,e))) break;
+  }
+  return { state:s, steps };
+}
+
+/* ---------- enemy AI ---------- */
+function randomPlan(start){
+  const plan = []; let ap = AP, pos = start;
+  while (ap > 0){
+    const t = ['move','melee','guard','ranged'][rnd(4)];
+    if (t==='move'){
+      const opts = [...Array(9).keys()].filter(c => adj(pos,c));
+      const to = opts[rnd(opts.length)]; plan.push(mk('move',{to})); pos = to; ap--;
+    } else if (t==='ranged'){
+      let at; do { at = rnd(9); } while (at===pos);
+      const a = mkRanged(pos, at); if (a.cost>ap) continue;
+      plan.push(a); ap -= a.cost;
+    } else { plan.push(mk(t)); ap--; }
+  }
+  return plan;
+}
+// Purposeful plan: approach the target square and/or shoot it, melee/guard once there.
+function chasePlan(start, target){
+  const plan = []; let ap = AP, pos = start;
+  while (ap > 0){
+    const d = dist(pos, target);
+    if (d === 0){ plan.push(mk(Math.random()<0.7 ? 'melee' : 'guard')); ap--; continue; }
+    if (d+1 <= ap && Math.random() < 0.5){ const a = mkRanged(pos, target); plan.push(a); ap -= a.cost; continue; }
+    const opts = [...Array(9).keys()].filter(c => adj(pos,c) && dist(c,target) < d);
+    const to = opts[rnd(opts.length)]; plan.push(mk('move',{to})); pos = to; ap--;
+  }
+  return plan;
+}
+// A player who reads the revealed plan: goes where enemy plan puts it, hitting that square when it can.
+function smartPlan(start, targetAt){
+  const plan = []; let ap = AP, pos = start;
+  while (ap > 0){
+    const t = targetAt(plan.length), d = dist(pos, t);
+    if (d === 0){ plan.push(mk(Math.random()<0.8 ? 'melee' : 'guard')); ap--; }
+    else if (d+1 <= ap && Math.random() < 0.7){ const a = mkRanged(pos, t); plan.push(a); ap -= a.cost; }
+    else { const opts = [...Array(9).keys()].filter(c => adj(pos,c) && dist(c,t) < d);
+           const to = opts[rnd(opts.length)]; plan.push(mk('move',{to})); pos = to; ap--; }
+  }
+  return plan;
+}
+// A player who holds their square: shoots at the target square when affordable, otherwise melee/guard in place.
+function holdPlan(start, target){
+  const plan = []; let ap = AP;
+  while (ap > 0){
+    const d = dist(start, target);
+    if (d>0 && d+1 <= ap && Math.random() < 0.6){ const a = mkRanged(start, target); plan.push(a); ap -= a.cost; }
+    else { plan.push(mk(Math.random()<0.6 ? 'melee' : 'guard')); ap--; }
+  }
+  return plan;
+}
+// Sniper helpers -------------------------------------------------------
+// Shoot the target square when affordable; otherwise melee in place or guard.
+function snipePlan(start, target){
+  const plan = []; let ap = AP;
+  while (ap > 0){
+    const d = dist(start, target);
+    if (d>0 && d+1 <= ap && Math.random() < 0.8){ const a = mkRanged(start, target); plan.push(a); ap -= a.cost; }
+    else { plan.push(mk(d===0 ? 'melee' : 'guard')); ap--; }
+  }
+  return plan;
+}
+// Back away from the target when it is close, then shoot it.
+function kitePlan(start, target){
+  const plan = []; let ap = AP, pos = start;
+  while (ap > 0){
+    const d = dist(pos, target);
+    if (d <= 1 && Math.random() < 0.7){
+      const opts = [...Array(9).keys()].filter(c => adj(pos,c)), far = Math.max(...opts.map(c => dist(c,target)));
+      const best = opts.filter(c => dist(c,target)===far), to = best[rnd(best.length)];
+      plan.push(mk('move',{to})); pos = to; ap--;
+    } else if (d>0 && d+1 <= ap){ const a = mkRanged(pos, target); plan.push(a); ap -= a.cost; }
+    else { plan.push(mk('guard')); ap--; }
+  }
+  return plan;
+}
+// Plans that cover one specific square (used to spot a chance to finish the player off).
+function coveragePlans(start, cell){
+  const out = [];
+  const fill = plan => { let ap = AP - plan.reduce((s,a)=>s+a.cost,0); while (ap-- > 0) plan.push(mk(Math.random()<0.5?'melee':'guard')); return plan; };
+  if (cell !== start){ const a = mkRanged(start, cell); if (a.cost <= AP) out.push(fill([a])); }
+  else out.push(fill([mk('melee')]));
+  const walk = chasePlan(start, cell).filter(a => a.t==='move');           // walk there, then melee
+  if (walk.length < AP && dist(projPos(walk, start), cell)===0) out.push(fill([...walk, mk('melee')]));
+  return out;
+}
+
+// Plans for enemy k, shaped by its tactic style; `chosen` holds plans other enemies already committed to.
+function aiPlan(state, k, chosen){
+  const style = k==='a' ? 'brawler' : 'sniper';
+  const others = ENEMIES.filter(e => e!==k && alive(state,e));
+  const aim = () => Math.random()<0.5 || !others.length ? state[k].pos : state[others[0]].pos;
+  const rivals = [
+    ...Array.from({length:12}, () => randomPlan(state.p.pos)),
+    ...Array.from({length:16}, () => chasePlan(state.p.pos, aim())),
+    ...Array.from({length:10}, () => holdPlan(state.p.pos, aim())),
+  ];
+  const near = dist(state[k].pos, state.p.pos) <= 1;           // player is up in our face
+  const cands = [];
+  for (let i=0; i<350; i++){
+    const m = i%3;
+    cands.push(style==='brawler'
+      ? (m ? chasePlan(state[k].pos, state.p.pos) : randomPlan(state[k].pos))
+      : (m===0 ? randomPlan(state[k].pos) : m===1 ? snipePlan(state[k].pos, state.p.pos) : kitePlan(state[k].pos, state.p.pos)));
+  }
+  for (let c=0; c<9; c++) cands.push(...coveragePlans(state[k].pos, c));
+
+  const scored = [];
+  for (const cand of cands){
+    const epos = j => { let p = state[k].pos; for (let q=0; q<=j && q<cand.length; q++) if (cand[q].t==='move') p = cand[q].to; return p; };
+    const mine = [...rivals, ...Array.from({length:8}, () => smartPlan(state.p.pos, epos))];
+    let tot = 0, kills = 0;
+    for (const r of mine){
+      const f = simulate(state, { ...chosen, p:r, [k]:cand }).state, d = dist(f[k].pos, f.p.pos);
+      if (f.p.hp <= 0) kills++;
+      tot += (style==='brawler' ? 0.4 : 0.9)*f[k].hp - 1.5*f.p.hp;      // sniper protects itself more
+      tot += style==='brawler' ? -0.5*d + (d===0 ? 0.6 : 0)              // brawler wants your square
+                               : 0.6*Math.min(d,2) - (d===0 ? 0.8 : 0);   // sniper wants range, and hates ending on your square (can't shoot you there)
+    }
+    // Taste for the style's own actions.
+    const count = t => cand.filter(a => a.t===t).length;
+    let sc = tot/mine.length;
+    if (style==='brawler') sc += 0.35*count('melee') - 0.25*cand.filter(a => a.t==='ranged' && a.cost>=3).length;
+    else {
+      sc += 0.35*count('ranged') - (near ? 0.5 : 0.3)*count('melee') + (near ? 0.3*count('guard') : 0);
+      if (near && dist(projPos(cand, state[k].pos), state.p.pos) > dist(state[k].pos, state.p.pos)) sc += 1.1;   // running away beats guarding/melee
+    }
+    sc += 8 * kills/mine.length;                                         // a chance to finish you beats any style
+    scored.push({ cand, sc });
+  }
+  // Pick among near-best plans so the enemies don't always do the same thing.
+  const top = Math.max(...scored.map(x => x.sc));
+  const good = scored.filter(x => x.sc >= top - 0.35);
+  return good[rnd(good.length)].cand;
+}
+
+/* ---------- UI ---------- */
+const $ = id => document.getElementById(id);
+const board = $('board');
+for (let i=0; i<9; i++){
+  const b = document.createElement('button'); b.className = 'cell'; b.dataset.i = i;
+  b.addEventListener('click', () => onCell(i));
+  b.addEventListener('mouseenter', () => paintTrack(i));
+  b.addEventListener('mouseleave', () => paintTrack(null));
+  board.appendChild(b);
+}
+$('top').innerHTML = ALL.map(k => `<div class="side ${k}" id="side_${k}"><h2>${UNITS[k].name} ${UNITS[k].tok}${STYLE[k]?` · ${STYLE[k].label}`:''}</h2>
+  <div class="hp"><i id="hp_${k}"></i></div><div class="meta" id="m_${k}"></div>${STYLE[k]?`<div class="meta">${STYLE[k].desc}</div>`:''}</div>`).join('');
+
+function planRows(plan){ return plan.map((a,i) => `<li><b>${i+1}.</b>${ICON[a.t]} ${describe(a)}</li>`).join(''); }
+function planBadges(plan, start, cls, out){
+  let pos = start;
+  plan.forEach((a,i) => {
+    let c = pos;
+    if (a.t==='move'){ c = a.to; pos = a.to; } else if (a.t==='ranged') c = a.at;
+    (out[c] = out[c] || []).push(`<span class="bdg ${cls}">${i+1}${ICON[a.t]}</span>`);
+  });
+  return out;
+}
+
+function canCell(i){
+  if (phase!=='plan' || !mode || pending) return null;
+  const pos = projPos(myPlan, S.p.pos), ap = left(myPlan);
+  if (mode==='move') return adj(pos,i) && ap>=1 ? 1 : null;
+  if (mode==='ranged'){ if (i===pos) return null; const c = 1 + dist(pos,i); return c<=ap ? c : null; }
+  return null;
+}
+
+// Highlight the squares between your (projected) position and a hovered ranged target.
+function setTrack(cells){
+  [...board.children].forEach((el,i) => {
+    const n = cells.indexOf(i);
+    el.classList.toggle('track', n>=0);
+    if (n>=0) el.dataset.n = n===cells.length-1 ? `dist ${cells.length}` : n+1; else delete el.dataset.n;
+  });
+}
+function paintTrack(i){
+  if (i===null || phase!=='plan' || mode!=='ranged' || !canCell(i)) return setTrack([]);
+  setTrack(track(projPos(myPlan, S.p.pos), i));
+}
+
+function render(flash=[], trail=[]){
+  const planning = phase==='plan';
+  const badges = {};
+  if (planning){ for (const k of ENEMIES) if (alive(S,k)) planBadges(foePlans[k], S[k].pos, k, badges);
+                 planBadges(myPlan, S.p.pos, 'p', badges); }
+  const ppos = planning ? projPos(myPlan, S.p.pos) : S.p.pos;
+  [...board.children].forEach((el,i) => {
+    const can = canCell(i);
+    el.className = 'cell' + (can ? ' can' : '') + (flash.includes(i) ? ' flash' : '');
+    el.innerHTML = `<span class="name">${cname(i)}</span>` +
+      ALL.filter(k => alive(S,k) && S[k].pos===i).map(k => `<span class="tok" data-u="${k}">${UNITS[k].tok}${S[k].g?'<i class="shield">🛡️</i>':''}</span>`).join('') +
+      `<span class="badges">${(badges[i]||[]).join('')}</span>` +
+      (can && mode==='ranged' ? `<span class="cost">${can} AP</span>` : '') +
+      (planning && ppos===i && ppos!==S.p.pos ? '<span class="cost" style="left:6px;right:auto;color:var(--you)">you end</span>' : '');
+  });
+  setTrack(trail);
+  for (const k of ALL){
+    const maxHp = k==='p' ? HP_P : HP_E;
+    $('hp_'+k).style.width = S[k].hp/maxHp*100 + '%';
+    $('m_'+k).textContent = alive(S,k) ? `HP ${S[k].hp}/${maxHp}${S[k].g?' · guarding':''}` : 'Defeated';
+    $('side_'+k).classList.toggle('dead', !alive(S,k));
+  }
+  $('enemyList').innerHTML = planning ? ENEMIES.filter(k=>alive(S,k)).map(k =>
+    `<div class="who ${k}">${UNITS[k].name} ${UNITS[k].tok}</div><ul class="plan">${planRows(foePlans[k])}</ul>`).join('') : '';
+  $('myList').innerHTML = planRows(myPlan);
+  const ap = left(myPlan);
+  $('pips').textContent = '●'.repeat(ap) + '○'.repeat(AP-ap);
+  document.querySelectorAll('button.act').forEach(b => {
+    b.classList.toggle('sel', mode===b.dataset.a);
+    b.disabled = !planning || ap<1 || !!pending;
+  });
+  $('pick').innerHTML = planning && pending ? `Several enemies will be on that square — hit which one?<div class="btns">${
+    pending.c.map(k => `<button class="sm" data-pick="${k}">${UNITS[k].tok} ${UNITS[k].name}</button>`).join('')}</div>` : '';
+  document.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+    myPlan[pending.i].tgt = b.dataset.pick; pending = null; render();
+  });
+  $('undo').disabled = !planning || !myPlan.length; $('clear').disabled = $('undo').disabled;
+  $('fight').disabled = !planning || !!pending;
+}
+
+function say(t){ $('msg').textContent = t; }
+function logLine(t){ const d = document.createElement('div'); d.textContent = t; $('log').appendChild(d); $('log').scrollTop = 1e9; }
+
+// Enemies expected on a square at a given step (their plans are revealed).
+function enemyPosAt(k, i){
+  let pos = S[k].pos;
+  for (let j=0; j<=i && j<foePlans[k].length; j++) if (foePlans[k][j].t==='move') pos = foePlans[k][j].to;
+  return pos;
+}
+function afterAttack(){
+  const i = myPlan.length-1, a = myPlan[i];
+  const cell = a.t==='melee' ? projPos(myPlan, S.p.pos) : a.at;
+  const c = ENEMIES.filter(k => alive(S,k) && enemyPosAt(k,i)===cell);
+  if (a.t==='melee' && c.some(k => foePlans[k][i]?.t==='melee')){ a.clash = true; return; }   // clash: no target choice
+  if (c.length===1) a.tgt = c[0]; else if (c.length>1) pending = { i, c };
+}
+function onCell(i){
+  const c = canCell(i); if (!c) return;
+  if (mode==='move') myPlan.push(mk('move',{to:i}));
+  else { myPlan.push(mkRanged(projPos(myPlan, S.p.pos), i)); afterAttack(); }
+  mode = null; render();
+}
+document.querySelectorAll('button.act').forEach(b => b.addEventListener('click', () => {
+  const t = b.dataset.a;
+  if (t==='melee' || t==='guard'){ myPlan.push(mk(t)); if (t==='melee') afterAttack(); mode = null; }
+  else mode = mode===t ? null : t;
+  render();
+}));
+$('undo').onclick = () => { myPlan.pop(); pending = null; mode = null; render(); };
+$('clear').onclick = () => { myPlan = []; pending = null; mode = null; render(); };
+$('fight').onclick = battle;
+
+/* ---------- attack animations ---------- */
+const FXCOL = { p:'#4aa3ff', a:'#ff5c6c', b:'#ffa24a' };
+const $fx = $('fx'), $wrap = $('boardwrap');
+function center(i){
+  const w = $wrap.getBoundingClientRect(), c = board.children[i].getBoundingClientRect();
+  return { x:c.left-w.left+c.width/2, y:c.top-w.top+c.height/2 };
+}
+function unitCenter(k, fallbackCell){                 // centre of the attacker's own token
+  const t = board.querySelector(`[data-u="${k}"]`);
+  if (!t) return center(fallbackCell);
+  const w = $wrap.getBoundingClientRect(), c = t.getBoundingClientRect();
+  return { x:c.left-w.left+c.width/2, y:c.top-w.top+c.height/2 };
+}
+function fxAdd(el, ms){ $fx.appendChild(el); return new Promise(r => setTimeout(() => { el.remove(); r(); }, ms)); }
+const SWORD = '<svg width="22" height="36" viewBox="0 0 22 36"><polygon points="11,0 15,24 7,24" fill="#e6ecf7" stroke="#8d97ab" stroke-width="1"/><rect x="3" y="24" width="16" height="3" rx="1" fill="#e0b34a"/><rect x="9.5" y="27" width="3" height="6" fill="#7a4b27"/><circle cx="11" cy="34.5" r="2" fill="#e0b34a"/></svg>';
+const BOW = '<svg width="40" height="40" viewBox="-20 -20 40 40"><path d="M -3 -17 Q 12 0 -3 17" fill="none" stroke="#a8693a" stroke-width="3.5" stroke-linecap="round"/><line x1="-3" y1="-17" x2="-3" y2="17" stroke="#e8e8e8" stroke-width="1"/></svg>';
+const toward = (k, cell, mid) => {                 // angle (rad, 0 = right) from the attacker's token to the unit it strikes
+  const foes = k==='p' ? ENEMIES : ['p'], act = null;
+  const t = foes.find(v => alive(mid,v) && mid[v].pos===cell);
+  const a = unitCenter(k, cell), b = t ? unitCenter(t, cell) : a;
+  return Math.hypot(b.x-a.x, b.y-a.y) > 4 ? Math.atan2(b.y-a.y, b.x-a.x) : (k==='p' ? 0 : Math.PI);
+};
+function swingAnim(k, cell, mid){          // sword held out from the attacker, hilt near them, tip outward, sweeping across the target
+  const col = FXCOL[k], { x, y } = unitCenter(k, cell), el = document.createElement('div');
+  const dir = toward(k, cell, mid) * 180/Math.PI + 90;          // CSS angle at which "up" (blade direction) faces the target
+  el.className = 'fx-swing'; el.style.left = x+'px'; el.style.top = y+'px'; el.style.setProperty('--c', col);
+  el.innerHTML = '<i class="arc"></i>' + SWORD;
+  $fx.appendChild(el);
+  el.animate([ { transform:`rotate(${dir-85}deg)`, opacity:0 }, { transform:`rotate(${dir-60}deg)`, opacity:1, offset:.12 },
+               { transform:`rotate(${dir+60}deg)`, opacity:1, offset:.85 }, { transform:`rotate(${dir+85}deg)`, opacity:0 } ],
+             { duration:600, easing:'ease-in-out', fill:'both' });
+  return new Promise(r => setTimeout(() => { el.remove(); r(); }, 650));
+}
+function shootAnim(k, from, to){            // bow held toward the target; arrow leaves it and flies along the same line
+  const col = FXCOL[k], a = unitCenter(k, from), b = center(to), ang = Math.atan2(b.y-a.y, b.x-a.x), deg = ang*180/Math.PI;
+  const bx = a.x + Math.cos(ang)*20, by = a.y + Math.sin(ang)*20;     // bow sits just in front of the archer
+  const bow = document.createElement('div'); bow.className = 'fx-bow'; bow.style.left = bx+'px'; bow.style.top = by+'px';
+  bow.style.setProperty('--c', col); bow.innerHTML = BOW;
+  bow.animate([ { transform:`rotate(${deg}deg) scale(.3)`, opacity:0 }, { transform:`rotate(${deg}deg) scale(1.1)`, opacity:1, offset:.25 },
+                { transform:`rotate(${deg}deg) scale(1)`, opacity:1, offset:.8 }, { transform:`rotate(${deg}deg) scale(1)`, opacity:0 } ],
+              { duration:800, fill:'both' });
+  const arrow = document.createElement('div'); arrow.className = 'fx-arrow'; arrow.style.setProperty('--c', col);
+  const at = (x, y, o) => ({ transform:`translate(${x}px,${y}px) rotate(${ang}rad)`, opacity:o });
+  arrow.animate([ at(bx,by,0), at(bx,by,1), at(b.x,b.y,1), at(b.x,b.y,0) ].map((f,i) => ({ ...f, offset:[0,.08,.92,1][i] })),
+                { duration:550, delay:250, easing:'ease-in', fill:'both' });
+  return Promise.all([ fxAdd(bow, 820), fxAdd(arrow, 830) ]);
+}
+function sparkAnim(cell){
+  const { x, y } = center(cell), el = document.createElement('div');
+  el.className = 'fx-spark'; el.textContent = '💥'; el.style.left = x+'px'; el.style.top = y+'px';
+  return fxAdd(el, 650);
+}
+function playFx(st){
+  const jobs = [];
+  for (const k in st.fire){
+    const a = st.fire[k];
+    if (a.t==='melee') jobs.push(swingAnim(k, st.mid[k].pos, st.mid));
+    else if (a.t==='ranged') jobs.push(shootAnim(k, st.mid[k].pos, a.at));
+  }
+  if (st.clash !== null) jobs.push(sleep(250).then(() => sparkAnim(st.clash)));
+  return Promise.all(jobs);
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function battle(){
+  if (phase!=='plan') return;
+  phase = 'battle'; mode = null;
+  const res = simulate(S, { p:myPlan, a:foePlans.a, b:foePlans.b });
+  let prev = clone(S);
+  say('Battle!'); render();
+  logLine(`— Round ${round} —`);
+  for (const st of res.steps){
+    await sleep(850);
+    const info = Object.keys(st.fire).map(k => `${UNITS[k].name}: ${ICON[st.fire[k].t]} ${describe(st.fire[k])}`).join('  ⟷  ');
+    say(`Step ${st.i+1} — ${info}`);
+    S = clone(st.mid); render();                 // everyone moves/guards first...
+    await playFx(st);                            // ...then the attacks play out...
+    logLine(`Step ${st.i+1} (all at once):`);
+    st.log.forEach(logLine);
+    S = clone(st.snap); render(st.hitCells, st.trail);   // ...and the damage lands
+  }
+  await sleep(850);
+  for (const k of ALL) S[k].g = false;
+  const won = ENEMIES.every(k => !alive(S,k)), lost = !alive(S,'p');
+  if (won || lost){
+    phase = 'over'; render();
+    say(won && lost ? 'Draw!' : won ? 'You win! 🎉' : 'You lose…');
+    $('fight').disabled = false; $('fight').textContent = 'Play again'; $('fight').onclick = newGame;
+    return;
+  }
+  round++; newRound();
+}
+function newRound(){
+  phase = 'plan'; mode = null; pending = null; myPlan = []; foePlans = { a:[], b:[] };
+  for (const k of ENEMIES) if (alive(S,k)) foePlans[k] = aiPlan(S, k, foePlans);
+  say(`Round ${round} — plan your ${AP} AP.`); render();
+}
+function newGame(){
+  S = { p:{pos:7, hp:HP_P, g:false}, a:{pos:0, hp:HP_E, g:false}, b:{pos:2, hp:HP_E, g:false} };
+  round = 1; $('log').innerHTML = ''; $('fight').textContent = 'Fight!'; $('fight').onclick = battle;
+  newRound();
+}
+newGame();
+</script>
+</body>
+</html>
