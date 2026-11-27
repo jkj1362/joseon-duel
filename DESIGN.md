@@ -64,7 +64,11 @@ Units may share a square, but **at most 4 units (any mix of sides) fit in one sq
 | **Move** | 1 per square | Any reachable square in one go, as far as your remaining AP allows (diagonals count as 1 square); hover shows the path and cost, like ranged. |
 | **Melee** | 1 | Hits an opponent in **your own square**. |
 | **Ranged** | 1 + distance (min 2) | Aimed at a **square**; hits whoever stands there when it fires. Can never target your own square. |
-| **Guard** | 1 | Blocks **one** hit landing on the same step it is played. Lasts only that step. |
+| **Guard** | 1 | Blocks **one** hit landing on the same step it is played. Lasts only that step. A guard that really blocks a hit also earns the **guard charge** (below). |
+
+**Guard charge.** A successful guard (it actually blocked a hit) gives that character **+1 AP in the next round only**. It is per character, applies to enemies too, never exceeds +1 and is **repeatable**: use the bonus, guard successfully again, and you have the extra AP again. Unused bonus AP is lost at the end of that round. The UI shows the bonus as a **gold dot** after the normal AP dots: a `+●` pops in on the card the moment the guard blocks, and the dot **blinks** during the next planning phase as a reminder to use it. A bonus round has one extra step. A clash cancels the strikes inside it, so a guard doesn't earn anything there. Buttons whose action the remaining AP can't pay for (Ranged under 2 AP, anything at 0 AP) are disabled.
+
+**Long moves.** A move costs 1 AP per square travelled and covers up to the remaining AP in one action (resolved in a single step, like a ranged attack). Every reachable square shows its cost while you plan. If a knock-back moves a unit before its planned move, it covers as many squares as the move's cost allows and stops short. Enemies plan long moves too.
 
 Distance is Chebyshev (diagonals count as 1). Ranged cost is measured from where you will be at that point of your plan. Hovering a ranged target highlights the track and shows `dist n`.
 
@@ -90,7 +94,7 @@ AP is **not** time. An earlier experiment that treated AP as time was reverted b
 
 ### 3.4 Knock-back
 
-A unit that takes **melee damage** is pushed to an adjacent square. The landing square is **random** for everyone. A melee hit fully absorbed by a guard does not push. Ranged hits do not push.
+After a **clash**, only the **losing side** is thrown clear to adjacent squares (allies and enemies that both lost land on different squares; each side lands together 60% of the time per unit, `CLASH_SHARE_PCT`); the winners keep the square. Outside clashes, a unit that takes **melee damage** is pushed to an adjacent square. The landing square is **random** for everyone. A melee hit fully absorbed by a guard does not push. Ranged hits do not push.
 
 The landing choice lives in one function (`pushDest`) so smarter AI logic can replace the randomness later. **(planned)**
 
@@ -202,6 +206,13 @@ The game is **visual first**: there are no plan-list text panels and no per-step
 ## 7. Roadmap
 
 ### Near term
+- **Plan readability on the map (design choice pending).** The numbered badges on destination squares are hard to read, for enemies and for the player's own plans: no start square or path, badges pile up when units share squares, and the step order doesn't read as a flow. Options (pick later; they combine):
+  1. **Path arrows:** an SVG overlay with an arrow from each unit's start to its destination in the unit's colour, step number on the arrow; ranged = dashed line to the target square; melee/guard = an icon on the unit's own square.
+  2. **Ghost tokens:** a faded copy of the unit's icon at its planned destination.
+  3. **Focus mode:** hover or click a unit or its card to highlight only that unit's plan and dim the rest; the default view stays light.
+  4. **Step scrubber:** a 1–N control showing where everyone stands after each step, to step through the round before committing.
+  5. **Plan strip on each card:** a row such as 👣 → 👣 → ⚔️ in step order, linked to the map on hover.
+  Current recommendation: build 1 + 2 + 3 together (1 and 2 show the movement, 3 stops nine units on 5×5 from turning into noise), then add 4 if that isn't enough.
 - **Clash pressure (planned):** a timer / click window so that not pressing in time counts as one failure.
 - **Smarter push destinations** (and AI that plans around knock-back and clash outcomes).
 - **Optional melee range (planned):** currently melee hits only your own square. Making melee reach adjacent squares would change clash, target choice and the AI, so it needs its own design pass.
@@ -249,7 +260,7 @@ Open questions:
 
 ## 9. Open design questions
 
-1. **Guard strength.** Should guard block all hits in its step instead of one? Currently two simultaneous hits mean one still lands.
+1. **Guard strength.** Should guard block all hits in its step instead of one? Currently two simultaneous hits mean one still lands. The guard charge (+1 AP next round) is the current reward for a good read; other ideas (riposte damage, an extra allowed miss in a clash) are parked.
 2. **Clash fairness.** Each player character now clashes separately with an equal share of the enemies. Open: should allies standing in the same square give any extra help (fewer prompts, a higher miss limit) beyond splitting the enemies?
 3. **Ranged versus melee balance.** Ranged can't hit your own square, which makes melee the counter to a sniper in your face; does that hold at 4 AP and on larger boards?
 4. **Difficulty curve** across party sizes and board tiers.
@@ -265,4 +276,6 @@ Open questions:
 | Show enemy **targets only** instead of full plans | Tried, **reverted** — hiding movement turns the game into guessing, and a sniper could run away indefinitely. With full reveal the player can see and cut off its retreat. |
 | "Engaged units can't be shot at" | Tried and **removed** — shots are locked at planning; only "can't target your own square" remains. |
 | Melee clash depends on chosen target | Tried, **reverted** — clash takes priority over target choice. |
+| Allies shorten the clash row (-1 prompt per extra ally) | Tried, **removed** — unintuitive and needs extra explanation. Allies keep the bigger win payoff only. |
+| Loss in a 3-vs-1 / 2-vs-1 clash hits every ally | Considered, **not chosen for now** — a lost clash hurts one random ally (rule A); to be re-tested if grouping up proves too strong. |
 | 4×4 board | Built and then **closed** for now; board scaling is planned per encounter (§7). |
