@@ -19,23 +19,36 @@
   #vbar a.on { border-color:var(--ok); color:var(--ok); font-weight:700; }
   #vbar input { width:46px; background:var(--panel); color:var(--txt); border:1px solid var(--line); border-radius:6px; padding:3px 4px; }
   #vbar button { padding:3px 10px; }
-  #top { display:flex; gap:8px; }
-  .side { flex:1; background:var(--panel); border-radius:10px; padding:6px 10px; }
-  .side h2 { margin:0 0 4px; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .side.p h2 { color:var(--you); } .side.a h2 { color:var(--fa); } .side.b h2 { color:var(--fb); }
+  /* Left column = your party (HP + AP together), right column = the enemies. Each unit's HP and AP sit in one card. */
+  #arena { flex:1; min-height:0; display:flex; gap:12px; align-items:stretch; }
+  .col { flex:0 0 clamp(150px, 19vw, 230px); display:flex; flex-direction:column; justify-content:center; gap:8px; overflow:auto; }
+  .col::before { content:attr(data-title); font-size:11px; letter-spacing:1px; color:var(--dim); text-align:center; }
+  .side { background:var(--panel); border:2px solid transparent; border-radius:10px; padding:7px 10px; }
+  .side.pc { cursor:pointer; } .side.pc:hover { background:#232938; }
+  .side.pc.on { border-color:var(--c); background:#262c3a; }
+  .side h2 { margin:0 0 5px; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .side h2 .sty { font-weight:400; font-size:10px; color:var(--dim); margin-left:4px; }
+  .res { display:flex; justify-content:space-between; align-items:center; gap:6px; margin-top:4px; }
+  .bpip { color:#ffd84a; text-shadow:0 0 6px #ffd84a99; }
+  .bpip.blink { animation:bpb .7s ease-in-out infinite alternate; }
+  .bpip.pop { animation:bpop .5s ease-out; font-weight:700; }
+  @keyframes bpop { 0% { transform:scale(2.2); opacity:0; } 100% { transform:scale(1); opacity:1; } }
+  @keyframes bpb { from { opacity:1; } to { opacity:.15; } }
+  .res .ap { letter-spacing:2px; font-size:13px; color:var(--c); white-space:nowrap; }
+  .side h2 { color:var(--c); }
   .hp { height:8px; background:#0006; border-radius:5px; overflow:hidden; }
   .hp i { display:block; height:100%; transition:width .4s; }
-  .side.p .hp i { background:var(--you); } .side.a .hp i { background:var(--fa); } .side.b .hp i { background:var(--fb); }
+  .hp i { background:var(--c); }
   .side.dead { opacity:.4; }
-  .meta { font-size:11px; color:var(--dim); margin-top:3px; }
+  .meta { font-size:11px; color:var(--dim); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #msg { font-weight:700; min-height:20px; text-align:center; font-size:15px; }
   /* Stage: the board is the biggest square that fits between the header and the action bar. */
-  #stage { flex:1; min-height:0; container-type:size; display:flex; align-items:center; justify-content:center; }
+  #stage { flex:1; min-width:0; min-height:0; container-type:size; display:flex; align-items:center; justify-content:center; }
   #boardwrap { position:relative; width:min(100cqw, 100cqh); height:min(100cqw, 100cqh); --cell:110px; --u:1; }
   #board { display:grid; gap:8px; width:100%; height:100%; }
   #fx { position:absolute; inset:0; pointer-events:none; overflow:visible; z-index:5; }
   .cell { position:relative; background:var(--panel); border:2px solid var(--line); border-radius:12px; min-width:0; min-height:0;
-          font-size:calc(var(--cell) * .36); display:flex; flex-wrap:wrap; align-items:center; justify-content:center; align-content:center; gap:2px; color:inherit; padding:0; cursor:default; }
+          font-size:calc(var(--cell) * var(--k, .36)); display:flex; flex-wrap:wrap; align-items:center; justify-content:center; align-content:center; gap:2px; color:inherit; padding:0; cursor:default; }
   .cell.can { border-color:var(--ok); cursor:pointer; background:#1f2a26; }
   .cell.can:hover { background:#27382f; }
   .cell.track { border-color:var(--trk); background:#38321a; }
@@ -46,10 +59,12 @@
   .cell.flash { animation:fl .5s; }
   @keyframes fl { 0%{background:#ff5c6c88} 100%{background:var(--panel)} }
   .tok { position:relative; display:inline-block; line-height:1; }
+  .cell[data-crowd="3"] .tok, .cell[data-crowd="4"] .tok { flex:0 0 42%; text-align:center; }   /* 3–4 units: two per row */
+  .tok.sel { outline:3px solid var(--c); outline-offset:2px; border-radius:50%; }
   .tok .shield { position:absolute; right:-22%; bottom:-8%; font-size:.55em; font-style:normal; }
   .badges { position:absolute; right:6px; top:4px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:3px; max-width:calc(var(--cell) * .8); }
   .badges .bdg { font-size:max(11px, calc(var(--cell) * .095)); padding:1px 5px; border-radius:7px; font-weight:700; color:#10131a; }
-  .badges .bdg.p { background:var(--you); } .badges .bdg.a { background:var(--fa); } .badges .bdg.b { background:var(--fb); }
+  .badges .bdg { background:var(--c); }
   /* Attack animations scale with the board (--u = cell size / 110px). */
   .fx-swing { position:absolute; width:0; height:0; }
   .fx-swing svg { position:absolute; width:calc(22px * var(--u)); height:calc(36px * var(--u)); left:calc(-11px * var(--u)); top:calc(-58px * var(--u)); filter:drop-shadow(0 0 5px var(--c)); overflow:visible; }
@@ -72,6 +87,7 @@
   .zswords .cs { position:absolute; left:50%; top:50%; filter:drop-shadow(0 0 8px var(--c)); }
   .zrow { position:absolute; left:3%; right:3%; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
   .zrow .zt { font-weight:800; color:var(--trk); font-size:16px; letter-spacing:.5px; }
+  .zrow .zv { font-size:13px; font-weight:700; color:#fff; }
   .zrow .zs { font-size:12px; color:#c9cfdd; }
   .zrow .crow { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
   .zrow .ci { width:var(--w); padding:4px 0; border:2px solid var(--line); border-radius:9px; background:var(--panel); display:flex; flex-direction:column; align-items:center; gap:3px; }
@@ -84,7 +100,6 @@
   /* Bottom action bar */
   #bar { display:flex; flex-direction:column; align-items:center; gap:8px; padding:6px 0 2px; }
   #barinfo { display:flex; align-items:center; gap:14px; flex-wrap:wrap; justify-content:center; min-height:24px; font-size:14px; }
-  .pips { font-size:20px; letter-spacing:3px; }
   #pick { font-size:14px; } #pick .btns { display:inline-flex; margin-left:8px; }
   .btns { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
   button.act, button.sm { background:#2a3040; color:var(--txt); border:2px solid transparent; border-radius:10px; padding:12px 18px; font-size:16px; cursor:pointer; }
@@ -98,6 +113,11 @@
   #extra { max-width:900px; margin:0 auto; padding:10px 14px 30px; font-size:13px; color:var(--dim); }
   #extra details { margin-bottom:10px; } #extra li { margin:2px 0; }
   #log { font-size:13px; line-height:1.5; max-height:200px; overflow:auto; color:#c9cfdd; margin-top:6px; }
+  @media (max-width: 760px){                   /* narrow screens: party above, board, enemies below */
+    #arena { flex-direction:column; }
+    .col { flex:0 0 auto; flex-direction:row; flex-wrap:wrap; justify-content:center; overflow:visible; }
+    .col::before { display:none; } .col .side { flex:1 1 120px; }
+  }
 </style>
 </head>
 <body>
@@ -106,17 +126,20 @@
     <h1>Joseon Duel</h1>
     <details id="tuning"><summary>⚙ Tuning</summary><div id="vbar"></div></details>
   </div>
-  <div id="top"></div>
   <div id="msg"></div>
 
-  <div id="stage">
-    <div id="boardwrap"><div id="board"></div><div id="fx"></div><div id="clashlayer"></div></div>
+  <div id="arena">
+    <div class="col" id="pcol"></div>
+    <div id="stage">
+      <div id="boardwrap"><div id="board"></div><div id="fx"></div><div id="clashlayer"></div></div>
+    </div>
+    <div class="col" id="ecol"></div>
   </div>
 
   <div id="bar">
-    <div id="barinfo"><span>AP <span class="pips" id="pips"></span></span><span id="pick"></span></div>
+    <div id="barinfo"><span id="pick"></span></div>
     <div class="btns">
-      <button class="act" data-a="move">👣 Move (1)</button>
+      <button class="act" data-a="move">👣 Move (1+)</button>
       <button class="act" data-a="melee">⚔️ Melee (1)</button>
       <button class="act" data-a="ranged">🏹 Ranged (2+)</button>
       <button class="act" data-a="guard">🛡️ Guard (1)</button>
@@ -133,43 +156,66 @@
 <details>
   <summary>Rules (as implemented)</summary>
   <ul>
-    <li>You (<span class="v-hp"></span> HP) face two enemies (<span class="v-ehp"></span> HP each). Defeat both to win; you lose at 0 HP.</li>
+    <li>Your party (<span class="v-np"></span> character<span class="v-nps"></span>, <span class="v-hp"></span> HP each) faces <span class="v-ne"></span> enemies (<span class="v-ehp"></span> HP each). Defeat every enemy to win; you lose when your whole party is down. Pick a character in the bar below the board (or click it on the map) to plan its actions.</li>
     <li>Each round everyone plans up to <span class="v-ap"></span> AP worth of actions (the bigger the map, the more AP). The enemies plan first; their numbered action badges show on the board.</li>
     <li>The battle runs in steps: every unit's 1st action resolves together, then every 2nd action, and so on. Within a step: guards, then moves, then attacks.</li>
-    <li>Move: 1 AP, one square in any direction, diagonals included. Guard: 1 AP, blocks one hit landing on the same step it is played (it ends with that step).</li>
+    <li>Move: 1 AP per square, in one go as far as your remaining AP allows (like choosing a ranged target; diagonals count as 1 square). The cost is shown on each reachable square. Guard: 1 AP, blocks one hit landing on the same step it is played (it ends with that step). <b>Guard charge:</b> a guard that really blocks a hit gives that character +1 AP next round only (shown as a gold, blinking dot — use it or lose it). The bonus never exceeds +1, but it is repeatable: guard successfully again (even in a bonus round) to earn it again.</li>
     <li>Melee: 1 AP, hits any opponent in your own square.</li>
     <li>Ranged: 1 + n AP, where n = squares to the target (diagonals count as 1). It can't target your own square, so the cheapest is 2 AP (neighbouring square), and with <span class="v-ap"></span> AP you can reach at most <span class="v-reach"></span> square(s) away. Hover a target to see the highlighted track and distance. It hits any opponent standing on the target square when it fires. Cost is measured from where you will be at that point of your plan.</li>
     <li>You can't shoot the unit sharing your square (a ranged target can never be your own square). To hit it, melee it, or step to a neighbouring square and shoot from there. Shooting someone in a different square is always allowed. A shot is locked in when planned: if someone steps onto the shooter's square, the shot still goes to its target square.</li>
     <li>Everyone can share a square. If you melee on the same step as an enemy who is meleeing you in your shared square, the two strikes clash. A clash takes priority, so you don't get to choose a target for that melee.</li>
-    <li>The enemies fight differently. Enemy A is a Melee Chaser: it chases you and prefers melee. Enemy B is a Ranged Sniper: it keeps its distance and shoots, and guards or backs away if you get close. Either will go all-in on an attack that could finish you off.</li>
+    <li>The enemies fight differently. <b>Melee Chaser</b>: chases its target, melee and guard only (no ranged). <b>Ranged Sniper</b>: keeps its distance and shoots; if you get close it backs away first, then guards or swings. <b>Hybrid Fighter</b> (4x4 and up): does everything, prefers melee, but will back off and shoot or guard when needed. 3x3 has a Chaser and a Sniper, 4x4 one of each type, and 5x5 one Sniper plus 3-4 Chasers/Hybrids (always a mix). Either will go all-in on an attack that could finish you off.</li>
     <li>An attack hits only one unit. If several enemies will stand on the square you attack, you choose which one to hit (the game asks when you plan it).</li>
-    <li>Knock-back: a unit that takes melee damage is pushed to a random adjacent square (a guarded, fully blocked hit doesn't push).</li>
-    <li>Clash: the clashing square zooms in and a row of prompts floats above it (3–6 per enemy, depending on the enemy): left-click on a ⚔️ prompt, right-click on a 🛡️ prompt. Two wrong clicks and you lose the clash: every clashing enemy hits you and you are knocked to an adjacent square. Otherwise you win: you hit every clashing enemy and knock them back. If several enemies clash with you at once, their prompts add up into one longer row, but the limit stays at two misses.</li>
+    <li>Knock-back: a unit that takes melee damage is pushed to a random adjacent square (a guarded, fully blocked hit doesn't push). After a clash, only the <b>losing side</b> is thrown clear to adjacent squares (each side tends to land together); the winners keep the square.</li>
+    <li>Crowding: at most 4 units (any mix of your side and the enemies) can share a square. If a square is full, a unit that tries to move in is blocked and stays where it was; when several units race for the last spot, a random one gets it. Knock-back also avoids full squares.</li>
+    <li>Clash: when player and enemy melees fire on the same square, the bigger side is split evenly over the smaller side and each share is its own clash. 2 vs 2 gives two 1-vs-1 clashes; 1 vs 3 gives one hard 1-vs-3 clash; 3 vs 1 (allies striking together) gives one 3-vs-1 clash. The clashing square zooms in and a row of prompts floats above it (3–6 per enemy, summed over the enemies in that clash): left-click on a ⚔️ prompt, right-click on a 🛡️ prompt. Two wrong clicks and you lose that clash. If you win, every ally's strike lands: each enemy in the clash takes a hit per ally and is knocked back. If you lose, each enemy hits one of your characters in it (at random) and whoever is hit is knocked back. Allies make a clash shorter and the payoff bigger, but never free.</li>
     <li>Each hit deals <span class="v-dmg"></span> damage. Enemies never hurt each other.</li>
   </ul>
 </details>
 </div>
 
 <script>
-// ---- Versions: edit the numbers here to tune each board size (or override from the bar above the board) ----
+// ---- Versions: edit the numbers here to tune each board size (or override from the Tuning menu) ----
 const VERSIONS = {
   3: { AP:3, HP_P:8, HP_E:8, DMG:2 },   // AP follows the map size: 3×3 → 3 AP, 4×4 → 4 AP, 5×5 → 5 AP
   4: { AP:4, HP_P:8, HP_E:8, DMG:2 },
   5: { AP:5, HP_P:8, HP_E:8, DMG:2 },
 };
+// Who fights on each map: party size, and the enemy line-up (drawn fresh each game).
+const ENCOUNTERS = { 3: { players:1 }, 4: { players:2 }, 5: { players:3 } };
+// 3x3: Melee Chaser + Ranged Sniper. 4x4: Melee Chaser + Hybrid Fighter + Ranged Sniper.
+// 5x5: one Sniper plus 3 or 4 Melee Chasers / Hybrid Fighters (random mix, never all the same type).
+function enemyStyles(n){
+  const shuf = a => a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
+  if (n === 3) return ['brawler', 'sniper'];
+  if (n === 4) return ['brawler', 'hybrid', 'sniper'];
+  const m = 3 + rnd(2), h = 1 + rnd(m - 1);                  // m fighters, h of them hybrid (1..m-1), the rest melee
+  return shuf([...Array(h).fill('hybrid'), ...Array(m - h).fill('brawler'), 'sniper']);
+}
 const Q = new URLSearchParams(location.search);
-const N = 3;   // 4×4 is closed for now (its settings stay in VERSIONS above); to reopen it, allow n=4 here and in the bar
+const N = [3,4,5].includes(+Q.get('n')) ? +Q.get('n') : 3;
 const CFG = VERSIONS[N], num = (key, d) => +Q.get(key) > 0 ? Math.floor(+Q.get(key)) : d;
 const AP = num('ap', CFG.AP), HP_P = num('hp', CFG.HP_P), HP_E = num('ehp', CFG.HP_E), DMG = num('dmg', CFG.DMG);
 const ICON = { move:'👣', melee:'⚔️', ranged:'🏹', guard:'🛡️' };
-// clash = how many click prompts a sword clash against this enemy has (min..max). Bosses / special enemies can use bigger ranges, e.g. {min:6, max:10}.
-const UNITS = { p:{name:'You', tok:'🧑'}, a:{name:'Enemy A', tok:'👾', clash:{min:3, max:6}}, b:{name:'Enemy B', tok:'👹', clash:{min:3, max:6}} };
 const CLASH_MAX_FAILS = 2;   // this many wrong clicks in one clash = you lose it
-const STYLE = {
-  a:{ label:'Melee Chaser', desc:'chases you down and melees' },
-  b:{ label:'Ranged Sniper',  desc:'keeps its distance, shoots; guards or flees if you close in' },
-};
-const ALL = ['p','a','b'], ENEMIES = ['a','b'];
+// Units are rebuilt every game: players p1..p3, enemies e1..e5. Enemy `clash` = how many click prompts a clash against it has (min..max);
+// bosses / special enemies can use bigger ranges, e.g. {min:6, max:10}.
+const PLAYER_TOK = ['🧑','🥷','🧙'], ENEMY_TOK = ['👾','👹','🧟','👻','🐺'];
+const STYLE_LABEL = { brawler:'Melee Chaser', hybrid:'Hybrid Fighter', sniper:'Ranged Sniper' };
+const PCOL = ['#4aa3ff','#2dd4bf','#a3e635'], ECOL = ['#ff5c6c','#ffa24a','#f472b6','#e9d758','#c08457'];
+let UNITS = {}, COL = {}, ALL = [], PLAYERS = [], ENEMIES = [];
+const isPlayer = k => k[0]==='p', isEnemy = k => k[0]==='e';
+function buildUnits(np, styles){
+  const ne = styles.length;
+  UNITS = {}; COL = {};
+  PLAYERS = [...Array(np).keys()].map(i => 'p' + (i+1));
+  ENEMIES = [...Array(ne).keys()].map(i => 'e' + (i+1));
+  PLAYERS.forEach((k, i) => { UNITS[k] = { name: np===1 ? 'You' : 'Player ' + (i+1), tok:PLAYER_TOK[i] }; COL[k] = PCOL[i]; });
+  ENEMIES.forEach((k, i) => { UNITS[k] = { name:'Enemy ' + 'ABCDE'[i], tok:ENEMY_TOK[i], style:styles[i], clash:{ min:3, max:6 } }; COL[k] = ECOL[i]; });
+  ALL = [...PLAYERS, ...ENEMIES];
+}
+const vb = (k, a, b) => UNITS[k].name==='You' ? a : b;          // verb agreement: "You take" / "Enemy A takes"
+const names = ks => ks.map(k => UNITS[k].name).join(' & ');
 const xy = i => ({ x:i%N, y:Math.floor(i/N) });
 const cname = i => 'ABCDE'[xy(i).x] + (xy(i).y+1);
 const dist = (a,b) => { const A=xy(a), B=xy(b); return Math.max(Math.abs(A.x-B.x), Math.abs(A.y-B.y)); };
@@ -182,103 +228,187 @@ function track(a, b){
   return out;
 }
 
-let S, myPlan, foePlans, mode, phase, pending = null, round = 1;   // phase: plan | battle | over
+let S, myPlans, foePlans, sel, mode, phase, pending = null, round = 1;
+let PAP = AP, PSHOOT = true;   // PSHOOT = plans may include ranged attacks (off for Melee Chasers). PAP = AP of the unit a plan is being generated for (base AP + its one-round guard bonus)   // phase: ai | plan | battle | over
 
 const projPos = (plan, pos) => { for (const a of plan) if (a.t==='move') pos = a.to; return pos; };
-const left = plan => AP - plan.reduce((s,a)=>s+a.cost, 0);
+// Guard charge: a successful guard earns +1 AP for the NEXT round only (max +1, but repeatable).
+const apOf = (k, s = S) => AP + ((s[k] && s[k].bonus) || 0);
+const left = (plan, k) => apOf(k) - plan.reduce((s,a)=>s+a.cost, 0);
 const mk = (t, extra={}) => ({ t, cost:1, ...extra });
 const mkRanged = (from, at) => mk('ranged', { at, cost:1 + dist(from, at), from });
 const tgtTag = a => a.tgt ? ` [${UNITS[a.tgt].name}]` : '';
-const describe = a => a.t==='move' ? `Move → ${cname(a.to)}`
+const describe = a => a.t==='move' ? `Move → ${cname(a.to)}${a.cost>1 ? ` (${a.cost} AP)` : ''}`
   : a.t==='melee' ? 'Melee (own square)' + (a.clash ? ' ⚡clash' : tgtTag(a))
   : a.t==='ranged' ? `Ranged → ${cname(a.at)} (${a.cost} AP)` + tgtTag(a) : 'Guard';
 const alive = (s,k) => s[k].hp > 0;
+const livePlayers = s => PLAYERS.filter(p => alive(s,p));
+const nearestPlayer = (s, pos) => { let best = null, bd = 99; for (const p of livePlayers(s)){ const d = dist(pos, s[p].pos); if (d < bd){ bd = d; best = p; } } return best; };
 
 /* ---------- simulation (shared by battle + AI) ---------- */
 function clone(s){ const o = {}; for (const k in s) o[k] = {...s[k]}; return o; }
-// Where a knocked-back unit lands: a random adjacent square (swap in smarter AI logic here later).
-const pushDest = (s, v) => { const opts = [...Array(N*N).keys()].filter(c => adj(s[v].pos, c)); return opts[rnd(opts.length)]; };
+// At most CAP units (either side, any mix) can share one square.
+const CLASH_SHARE_PCT = 60;  // after a clash, chance that a unit lands on the same square as an already-thrown teammate
+const CAP = 4;
+const occupants = (s, c) => ALL.filter(k => alive(s,k) && s[k].pos===c);
+// Small seeded random generator: the battle previews a step and then resolves it for real with the same seed, so both agree.
+function mulberry32(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+// Where a knocked-back unit lands: a random adjacent square that still has room, or null (swap in smarter AI logic here later).
+const pushDest = (s, v, R = rnd) => { const opts = [...Array(N*N).keys()].filter(c => adj(s[v].pos, c) && occupants(s,c).length < CAP); return opts.length ? opts[R(opts.length)] : null; };
 const randClash = () => Math.random() < 0.5 ? 'win' : 'lose';
-// Resolves step i on state s (mutates s). clashFn(clashingEnemies) -> 'win' | 'lose' decides a clash; the AI's look-ahead uses a coin flip,
-// the real battle plays the click minigame. Returns the step record, or null when nobody acts.
-function simulateStep(s, plans, i, clashFn = randClash){
-  {
-    const fire = {}, log = [], hitCells = [], trail = [];
-    for (const k of ALL) if (alive(s,k) && plans[k]?.[i]) fire[k] = plans[k][i];
-    if (!Object.keys(fire).length) return null;
-    for (const k in fire) if (fire[k].t==='guard'){ s[k].g = true; log.push(`${UNITS[k].name} guards.`); }
-    for (const k in fire) if (fire[k].t==='move'){
+// Resolves step i on state s (mutates s). clashFn(clash, index) -> 'win' | 'lose' decides each clash (win = the player character wins); the AI's
+// look-ahead uses a coin flip, the real battle plays the click minigame. `pre` = the clashes found by an earlier preview of this same step,
+// `seed` = its random seed. Returns the step record, or null when nobody acts.
+function simulateStep(s, plans, i, clashFn = randClash, pre = null, seed = null){
+  const rng = seed==null ? Math.random : mulberry32(seed), R = n => Math.floor(rng() * n);
+  const shuffle = a => { a = a.slice(); for (let j=a.length-1; j>0; j--){ const x = R(j+1); [a[j], a[x]] = [a[x], a[j]]; } return a; };
+  const fire = {}, log = [], hitCells = [], trail = [];
+  for (const k of ALL) if (alive(s,k) && plans[k]?.[i]) fire[k] = plans[k][i];
+  if (!Object.keys(fire).length) return null;
+  for (const k in fire) if (fire[k].t==='guard'){ s[k].g = true; log.push(`${UNITS[k].name} guards.`); }
+  // Moves happen together, but a square holds at most CAP units: movers arrive in a random order and the late ones are blocked.
+  const movers = shuffle(ALL.filter(k => fire[k]?.t==='move'));
+  if (movers.length){
+    const occ = {}, from = {};
+    for (const k of ALL) if (alive(s,k)) occ[s[k].pos] = (occ[s[k].pos] || 0) + 1;
+    movers.forEach(k => { from[k] = s[k].pos; occ[from[k]]--; });             // everyone moving has left first
+    for (const k of movers){
       // a planned move is aimed at a square; if a knock-back left it out of reach, just take one step toward it
-      const to = dist(s[k].pos, fire[k].to) > 1 ? track(s[k].pos, fire[k].to)[0] : fire[k].to;
-      s[k].pos = to; log.push(`${UNITS[k].name} moves to ${cname(to)}.`);
-    }
-    const mid = clone(s);
-    const cancelled = new Set(), clashers = [];
-    if (fire.p?.t==='melee') for (const e of ENEMIES)             // melee clash beats target choice: every meleeing enemy in your square cancels with you
-      if (fire[e]?.t==='melee' && alive(s,e) && s[e].pos===s.p.pos){
-        cancelled.add('p'); cancelled.add(e); clashers.push(e);
-        log.push(`${UNITS[e].name} and You clash at ${cname(s.p.pos)} — both melee strikes cancel out!`);
+      const want = fire[k].to, reach = fire[k].cost || 1, to = dist(from[k], want) > reach ? track(from[k], want)[reach-1] : want;   // a long move covers up to its cost in squares in one step
+      if ((occ[to] || 0) < CAP){ occ[to] = (occ[to] || 0) + 1; s[k].pos = to; log.push(`${UNITS[k].name} moves to ${cname(to)}.`); }
+      else {
+        log.push(`${UNITS[k].name} can't enter ${cname(to)} — it's full!`);
+        let back = from[k];
+        if ((occ[back] || 0) >= CAP) back = [...Array(N*N).keys()].filter(c => (occ[c] || 0) < CAP).sort((a,b) => dist(from[k],a) - dist(from[k],b))[0];
+        occ[back] = (occ[back] || 0) + 1; s[k].pos = back;
       }
-    const clashAt = clashers.length ? s.p.pos : null;
-    const outcome = clashers.length ? clashFn(clashers) : null;
-    if (outcome) log.push(outcome==='win' ? 'You win the clash!' : 'You lose the clash!');
-    const hits = {}, meleed = new Set(), tookDamage = new Set();
-    // The clash winner lands a hit: you hit every clashing enemy, or each of them hits you.
-    if (outcome==='win') clashers.forEach(e => hits[e] = (hits[e]||0) + 1);
-    else if (outcome==='lose') hits.p = clashers.length;
-    for (const k in fire){
-      const act = fire[k];
-      if ((act.t!=='melee' && act.t!=='ranged') || cancelled.has(k)) continue;
-      if (act.t==='ranged' && act.at===s[k].pos) continue;   // a ranged target can never be the shooter's own square
-      const cell = act.t==='melee' ? s[k].pos : act.at, foes = k==='p' ? ENEMIES : ['p'];
-      if (act.t==='ranged') trail.push(...track(s[k].pos, cell));
-      const verb = act.t==='melee' ? 'strikes' : 'shoots at';
-      let victims = foes.filter(v => alive(s,v) && s[v].pos===cell);
-      victims = act.tgt ? victims.filter(v => v===act.tgt) : victims.slice(0,1);   // one target per attack
-      if (act.t==='melee') victims.forEach(v => meleed.add(v));
-      if (victims.length){ victims.forEach(v => hits[v] = (hits[v]||0) + 1);
-        log.push(`${UNITS[k].name} ${verb} ${cname(cell)} — hit ${victims.map(v=>UNITS[v].name).join(' & ')}!`); }
-      else log.push(`${UNITS[k].name} ${verb} ${cname(cell)} — miss.`);
     }
-    for (const v in hits){
-      let n = hits[v];
-      if (s[v].g){ s[v].g = false; n--; log.push(`${UNITS[v].name}'s guard blocks a hit.`); }
-      if (n > 0){ hitCells.push(s[v].pos); tookDamage.add(v);   // only squares of units that actually take damage blink red
-                  s[v].hp = Math.max(0, s[v].hp - n*DMG); log.push(`${UNITS[v].name} ${v==='p' ? 'take' : 'takes'} ${n*DMG} damage${s[v].hp<=0?' and is defeated!':'.'}`); }
-    }
-    // Knock-back: whoever lost a clash, and anyone who took melee damage, is pushed to an adjacent square.
-    const pushSet = new Set();
-    if (outcome==='win') clashers.forEach(e => pushSet.add(e)); else if (outcome==='lose') pushSet.add('p');
-    for (const v of meleed) if (tookDamage.has(v)) pushSet.add(v);
-    const pushes = {};
-    for (const v of pushSet) if (alive(s,v)){
-      const from = s[v].pos, to = pushDest(s, v);
-      s[v].pos = to; pushes[v] = { from, to }; log.push(`${UNITS[v].name} ${v==='p' ? 'are' : 'is'} knocked back to ${cname(to)}.`);
-    }
-    const st = { i, fire, log, mid, snap:clone(s), hitCells, trail, clash: clashAt, clashers, pushes };
-    for (const k of ALL) s[k].g = false;   // guard only covers the step it was played in
-    return st;
   }
+  const mid = clone(s);
+  // Clash: on a square where player melees and enemy melees fire together, the bigger side is split evenly over the smaller side and each
+  // share is one clash: 2 vs 2 = two 1-vs-1 clashes, 1 vs 3 = one 1-vs-3 clash, 3 vs 1 = one 3-vs-1 clash (allies striking together), 3 vs 2 = 2-vs-1 + 1-vs-1.
+  const cancelled = new Set(), melees = {};
+  let clashes = [];
+  if (pre) clashes = pre.map(c => ({ cell:c.cell, players:[...c.players], enemies:[...c.enemies] }));
+  else {
+    for (const k in fire) if (fire[k].t==='melee') (melees[s[k].pos] = melees[s[k].pos] || []).push(k);
+    for (const c in melees){
+      const ps = shuffle(melees[c].filter(isPlayer)), es = shuffle(melees[c].filter(isEnemy));
+      if (!ps.length || !es.length) continue;
+      if (ps.length <= es.length){
+        const share = ps.map(() => []);
+        es.forEach((e, j) => share[j % ps.length].push(e));
+        ps.forEach((p, j) => clashes.push({ cell:+c, players:[p], enemies:share[j] }));
+      } else {
+        const share = es.map(() => []);
+        ps.forEach((p, j) => share[j % es.length].push(p));
+        es.forEach((e, j) => clashes.push({ cell:+c, players:share[j], enemies:[e] }));
+      }
+    }
+  }
+  for (const cl of clashes){
+    cl.players.forEach(p => cancelled.add(p)); cl.enemies.forEach(e => cancelled.add(e));
+    log.push(`${names(cl.players)} and ${names(cl.enemies)} clash at ${cname(cl.cell)} — the melee strikes cancel out!`);
+  }
+  const hits = {}, meleed = new Set(), tookDamage = new Set(), pushSet = new Set(), lost = new Set();   // lost = units on the losing side of a clash
+  clashes.forEach((cl, idx) => {
+    cl.outcome = clashFn(cl, idx);
+    const who = names(cl.players), plural = cl.players.length > 1 || who==='You';
+    if (cl.outcome==='win'){            // the player side wins: every ally's strike lands, so each enemy in this clash takes one hit per ally, and is knocked back
+      log.push(`${who} ${plural ? 'win' : 'wins'} the clash at ${cname(cl.cell)}!`);
+      cl.enemies.forEach(e => { hits[e] = (hits[e]||0) + cl.players.length; lost.add(e); });
+    } else {                            // the enemies win: each of them hits one of the players (at random), and only one is hurt, but the whole losing side is thrown clear
+      log.push(`${who} ${plural ? 'lose' : 'loses'} the clash at ${cname(cl.cell)}!`);
+      cl.enemies.forEach(() => { const v = cl.players[R(cl.players.length)]; hits[v] = (hits[v]||0) + 1; });
+      cl.players.forEach(p => lost.add(p));
+    }
+  });
+  for (const k in fire){
+    const act = fire[k];
+    if ((act.t!=='melee' && act.t!=='ranged') || cancelled.has(k)) continue;
+    if (act.t==='ranged' && act.at===s[k].pos) continue;   // a ranged target can never be the shooter's own square
+    const cell = act.t==='melee' ? s[k].pos : act.at, foes = isPlayer(k) ? ENEMIES : PLAYERS;
+    if (act.t==='ranged') trail.push(...track(s[k].pos, cell));
+    const verb = act.t==='melee' ? 'strikes' : 'shoots at';
+    let victims = foes.filter(v => alive(s,v) && s[v].pos===cell);
+    if (act.tgt) victims = victims.filter(v => v===act.tgt);
+    else if (victims.length > 1) victims = isPlayer(k) ? victims.slice(0,1) : [victims[R(victims.length)]];   // one target per attack
+    if (act.t==='melee') victims.forEach(v => meleed.add(v));
+    if (victims.length){ victims.forEach(v => hits[v] = (hits[v]||0) + 1);
+      log.push(`${UNITS[k].name} ${verb} ${cname(cell)} — hit ${names(victims)}!`); }
+    else log.push(`${UNITS[k].name} ${verb} ${cname(cell)} — miss.`);
+  }
+  for (const v in hits){
+    let n = hits[v];
+    if (s[v].g){ s[v].g = false; n--;
+      if (!s[v].earn){ s[v].earn = true; log.push(`${UNITS[v].name}'s guard blocks a hit — +1 AP next round!`); }
+      else log.push(`${UNITS[v].name}'s guard blocks a hit.`); }
+    if (n > 0){ hitCells.push(s[v].pos); tookDamage.add(v);   // only squares of units that actually take damage blink red
+                s[v].hp = Math.max(0, s[v].hp - n*DMG); log.push(`${UNITS[v].name} ${vb(v,'take','takes')} ${n*DMG} damage${s[v].hp<=0?' and is defeated!':'.'}`); }
+  }
+  // After a clash only the LOSING side is thrown clear to an adjacent square; the winners hold the square. Allies and enemies that both lost
+  // (separate clashes on one square) land on different squares; each side tends (CLASH_SHARE_PCT %) to land together, but not always.
+  for (const v of meleed) if (tookDamage.has(v)) pushSet.add(v);
+  const pushes = {}, handled = new Set();
+  const room = c => occupants(s, c).length < CAP;
+  const scatter = (units, banned, c) => {
+    const used = [];
+    for (const v of units){
+      let opts = [...Array(N*N).keys()].filter(x => adj(c, x) && room(x) && !banned.has(x));
+      if (!opts.length) opts = [...Array(N*N).keys()].filter(x => adj(c, x) && room(x));   // no clean square left: any adjacent square with room
+      if (!opts.length){ log.push(`${UNITS[v].name} ${vb(v,'have','has')} no room to be knocked back.`); continue; }
+      const mates = used.filter(x => opts.includes(x));
+      const to = mates.length && R(100) < CLASH_SHARE_PCT ? mates[R(mates.length)] : opts[R(opts.length)];
+      s[v].pos = to; used.push(to); pushes[v] = { from:c, to };
+      log.push(`${UNITS[v].name} ${vb(v,'are','is')} knocked back to ${cname(to)}.`);
+    }
+    return new Set(used);
+  };
+  for (const c of new Set(clashes.map(cl => cl.cell))){
+    const here = ALL.filter(k => alive(s,k) && s[k].pos===c && lost.has(k));
+    here.forEach(k => handled.add(k));
+    const ps = here.filter(isPlayer), es = here.filter(isEnemy);
+    if (R(2)){ const b = scatter(es, new Set(), c); scatter(ps, b, c); }
+    else      { const b = scatter(ps, new Set(), c); scatter(es, b, c); }
+  }
+  for (const v of pushSet) if (alive(s,v) && !handled.has(v)){
+    const from = s[v].pos, to = pushDest(s, v, R);
+    if (to === null){ log.push(`${UNITS[v].name} ${vb(v,'have','has')} no room to be knocked back.`); continue; }
+    s[v].pos = to; pushes[v] = { from, to }; log.push(`${UNITS[v].name} ${vb(v,'are','is')} knocked back to ${cname(to)}.`);
+  }
+  const st = { i, fire, log, mid, snap:clone(s), hitCells, trail, clashes, pushes };
+  for (const k of ALL) s[k].g = false;   // guard only covers the step it was played in
+  return st;
 }
+const teamDown = (s, team) => team.every(k => !alive(s,k));
 function simulate(start, plans){
   const s = clone(start), steps = [];
-  for (let i=0; i<AP; i++){
+  for (let i=0; i<=AP; i++){
     const st = simulateStep(s, plans, i);
     if (!st) continue;
     steps.push(st);
-    if (!alive(s,'p') || ENEMIES.every(e => !alive(s,e))) break;
+    if (teamDown(s, PLAYERS) || teamDown(s, ENEMIES)) break;
   }
   return { state:s, steps };
 }
 
 /* ---------- enemy AI ---------- */
+// A move for the plan generators: any square within `ap` AP (cost = squares travelled, like a player's long move) that passes `good`;
+// half the time the best-scoring one (e.g. as close to the target as possible), otherwise a random one. Null when there is none.
+function pickMove(pos, ap, good, score){
+  const opts = [...Array(N*N).keys()].filter(c => c!==pos && dist(pos,c)<=ap && good(c));
+  if (!opts.length) return null;
+  let to;
+  if (score && Math.random() < 0.5){ const b = Math.max(...opts.map(score)), best = opts.filter(c => score(c)===b); to = best[rnd(best.length)]; }
+  else to = opts[rnd(opts.length)];
+  return mk('move', { to, cost:dist(pos,to) });
+}
 function randomPlan(start){
-  const plan = []; let ap = AP, pos = start;
+  const plan = []; let ap = PAP, pos = start;
   while (ap > 0){
-    const t = ['move','melee','guard','ranged'][rnd(4)];
+    const pool = ['move','melee','guard','ranged'].slice(0, PSHOOT ? 4 : 3), t = pool[rnd(pool.length)];
     if (t==='move'){
-      const opts = [...Array(N*N).keys()].filter(c => adj(pos,c));
-      const to = opts[rnd(opts.length)]; plan.push(mk('move',{to})); pos = to; ap--;
+      const mv = pickMove(pos, ap, () => true); plan.push(mv); pos = mv.to; ap -= mv.cost;
     } else if (t==='ranged'){
       let at; do { at = rnd(N*N); } while (at===pos);
       const a = mkRanged(pos, at); if (a.cost>ap) continue;
@@ -289,43 +419,40 @@ function randomPlan(start){
 }
 // Purposeful plan: approach the target square and/or shoot it, melee/guard once there.
 function chasePlan(start, target){
-  const plan = []; let ap = AP, pos = start;
+  const plan = []; let ap = PAP, pos = start;
   while (ap > 0){
     const d = dist(pos, target);
     if (d === 0){ plan.push(mk(Math.random()<0.7 ? 'melee' : 'guard')); ap--; continue; }
-    if (d+1 <= ap && Math.random() < 0.5){ const a = mkRanged(pos, target); plan.push(a); ap -= a.cost; continue; }
-    const opts = [...Array(N*N).keys()].filter(c => adj(pos,c) && dist(c,target) < d);
-    const to = opts[rnd(opts.length)]; plan.push(mk('move',{to})); pos = to; ap--;
+    if (PSHOOT && d+1 <= ap && Math.random() < 0.5){ const a = mkRanged(pos, target); plan.push(a); ap -= a.cost; continue; }
+    const mv = pickMove(pos, ap, c => dist(c,target) < d, c => -dist(c,target)); plan.push(mv); pos = mv.to; ap -= mv.cost;
   }
   return plan;
 }
 // A player who reads the revealed plan: goes where enemy plan puts it, hitting that square when it can.
 function smartPlan(start, targetAt){
-  const plan = []; let ap = AP, pos = start;
+  const plan = []; let ap = PAP, pos = start;
   while (ap > 0){
     const t = targetAt(plan.length), d = dist(pos, t);
     if (d === 0){ plan.push(mk(Math.random()<0.8 ? 'melee' : 'guard')); ap--; }
     else if (d+1 <= ap && Math.random() < 0.7){ const a = mkRanged(pos, t); plan.push(a); ap -= a.cost; }
-    else { const opts = [...Array(N*N).keys()].filter(c => adj(pos,c) && dist(c,t) < d);
-           const to = opts[rnd(opts.length)]; plan.push(mk('move',{to})); pos = to; ap--; }
+    else { const mv = pickMove(pos, ap, c => dist(c,t) < d, c => -dist(c,t)); plan.push(mv); pos = mv.to; ap -= mv.cost; }
   }
   return plan;
 }
 // A player who sees the enemy coming and steps away from it each step (so repeated melee at one square whiffs).
 function evadePlan(start, enemyAt){
-  const plan = []; let ap = AP, pos = start;
+  const plan = []; let ap = PAP, pos = start;
   while (ap > 0){
     const e = enemyAt(plan.length), here = dist(pos, e);
-    const opts = [...Array(N*N).keys()].filter(c => adj(pos,c) && dist(c,e) > here);
-    if (opts.length && Math.random() < 0.85){ const to = opts[rnd(opts.length)]; plan.push(mk('move',{to})); pos = to; }
-    else plan.push(mk(Math.random()<0.5 ? 'guard' : 'melee'));
-    ap--;
+    const mv = Math.random() < 0.85 ? pickMove(pos, ap, c => dist(c,e) > here, c => dist(c,e)) : null;
+    if (mv){ plan.push(mv); pos = mv.to; ap -= mv.cost; }
+    else { plan.push(mk(Math.random()<0.5 ? 'guard' : 'melee')); ap--; }
   }
   return plan;
 }
 // A player who holds their square: shoots at the target square when affordable, otherwise melee/guard in place.
 function holdPlan(start, target){
-  const plan = []; let ap = AP;
+  const plan = []; let ap = PAP;
   while (ap > 0){
     const d = dist(start, target);
     if (d>0 && d+1 <= ap && Math.random() < 0.6){ const a = mkRanged(start, target); plan.push(a); ap -= a.cost; }
@@ -336,7 +463,7 @@ function holdPlan(start, target){
 // Sniper helpers -------------------------------------------------------
 // Shoot the target square when affordable; otherwise melee in place or guard.
 function snipePlan(start, target){
-  const plan = []; let ap = AP;
+  const plan = []; let ap = PAP;
   while (ap > 0){
     const d = dist(start, target);
     if (d>0 && d+1 <= ap && Math.random() < 0.8){ const a = mkRanged(start, target); plan.push(a); ap -= a.cost; }
@@ -346,13 +473,12 @@ function snipePlan(start, target){
 }
 // Back away from the target when it is close, then shoot it.
 function kitePlan(start, target){
-  const plan = []; let ap = AP, pos = start;
+  const plan = []; let ap = PAP, pos = start;
   while (ap > 0){
     const d = dist(pos, target);
     if (d <= 1 && Math.random() < 0.7){
-      const opts = [...Array(N*N).keys()].filter(c => adj(pos,c)), far = Math.max(...opts.map(c => dist(c,target)));
-      const best = opts.filter(c => dist(c,target)===far), to = best[rnd(best.length)];
-      plan.push(mk('move',{to})); pos = to; ap--;
+      const mv = pickMove(pos, Math.max(1, ap-2), () => true, c => dist(c,target));   // back away, leaving AP to shoot afterwards
+      plan.push(mv); pos = mv.to; ap -= mv.cost;
     } else if (d>0 && d+1 <= ap){ const a = mkRanged(pos, target); plan.push(a); ap -= a.cost; }
     else { plan.push(mk('guard')); ap--; }
   }
@@ -360,74 +486,104 @@ function kitePlan(start, target){
 }
 // Close in just far enough to get the target inside shooting reach (AP-1 squares), then shoot; keep distance otherwise.
 function approachPlan(start, target){
-  const plan = []; let ap = AP, pos = start;
+  const plan = []; let ap = PAP, pos = start;
   while (ap > 0){
     const d = dist(pos, target);
-    if (d > AP-1){                                   // out of reach: step toward the target
-      const opts = [...Array(N*N).keys()].filter(c => adj(pos,c) && dist(c,target) < d);
-      const to = opts[rnd(opts.length)]; plan.push(mk('move',{to})); pos = to; ap--;
+    if (d > PAP-1){                                   // out of reach: step toward the target
+      const mv = pickMove(pos, ap, c => dist(c,target) < d && dist(c,target) >= Math.min(2, d-1), c => -dist(c,target)); plan.push(mv); pos = mv.to; ap -= mv.cost;
     } else if (d>0 && d+1 <= ap){ const a = mkRanged(pos, target); plan.push(a); ap -= a.cost; }
     else { plan.push(mk(d===0 ? 'melee' : 'guard')); ap--; }
   }
   return plan;
 }
-// Plans that cover one specific square (used to spot a chance to finish the player off).
+// Plans that cover one specific square (used to spot a chance to finish a player off).
 function coveragePlans(start, cell){
   const out = [];
-  const fill = plan => { let ap = AP - plan.reduce((s,a)=>s+a.cost,0); while (ap-- > 0) plan.push(mk(Math.random()<0.5?'melee':'guard')); return plan; };
-  if (cell !== start){ const a = mkRanged(start, cell); if (a.cost <= AP) out.push(fill([a])); }
+  const fill = plan => { let ap = PAP - plan.reduce((s,a)=>s+a.cost,0); while (ap-- > 0) plan.push(mk(Math.random()<0.5?'melee':'guard')); return plan; };
+  if (cell !== start){ if (PSHOOT){ const a = mkRanged(start, cell); if (a.cost <= PAP) out.push(fill([a])); } }
   else out.push(fill([mk('melee')]));
   const walk = chasePlan(start, cell).filter(a => a.t==='move');           // walk there, then melee
-  if (walk.length < AP && dist(projPos(walk, start), cell)===0) out.push(fill([...walk, mk('melee')]));
+  if (walk.reduce((a,m) => a + m.cost, 0) < PAP && dist(projPos(walk, start), cell)===0) out.push(fill([...walk, mk('melee')]));
   return out;
 }
 
+const GUARD_VARIANTS = 60;
+const STYLE_AI = { brawler:{ hp:0.4, earn:0.5 }, hybrid:{ hp:0.65, earn:0.6 }, sniper:{ hp:0.9, earn:0.9 } };   // self-HP weight, value of a guard charge
 // Plans for enemy k, shaped by its tactic style; `chosen` holds plans other enemies already committed to.
-function aiPlan(state, k, chosen){
-  const style = k==='a' ? 'brawler' : 'sniper';
+// Each candidate plan is scored by simulating it against many guessed plans for every player character.
+function aiPlan(state, k, chosen){ PAP = apOf(k, state); PSHOOT = UNITS[k].style !== 'brawler'; try { return aiPlanCore(state, k, chosen); } finally { PAP = AP; PSHOOT = true; } }
+function aiPlanCore(state, k, chosen){
+  const gen = (u, fn) => { const old = [PAP, PSHOOT]; PAP = apOf(u, state); PSHOOT = true; try { return fn(); } finally { [PAP, PSHOOT] = old; } };   // plan for u with u's own AP
+  const style = UNITS[k].style, myPos = state[k].pos;
+  const live = livePlayers(state);
+  if (!live.length) return [];
   const others = ENEMIES.filter(e => e!==k && alive(state,e));
-  const aim = () => Math.random()<0.5 || !others.length ? state[k].pos : state[others[0]].pos;
-  const rivals = [
-    ...Array.from({length:12}, () => randomPlan(state.p.pos)),
-    ...Array.from({length:16}, () => chasePlan(state.p.pos, aim())),
-    ...Array.from({length:10}, () => holdPlan(state.p.pos, aim())),
-  ];
-  const near = dist(state[k].pos, state.p.pos) <= 1;           // player is up in our face
+  const total = live.length + others.length + 1;                       // bigger fights get fewer samples per enemy to stay fast
+  const K1 = Math.max(14, Math.round(38*3/total)), K2 = Math.max(10, Math.round(24*3/total)), NC = Math.max(110, Math.round(350*3/total));
+  const aim = () => Math.random()<0.5 || !others.length ? myPos : state[others[rnd(others.length)]].pos;
+  const staticSet = () => { const pl = {};
+    for (const u of live){ const r = Math.random(), st = state[u].pos;
+      pl[u] = gen(u, () => r < 0.32 ? randomPlan(st) : r < 0.74 ? chasePlan(st, aim()) : holdPlan(st, aim())); }
+    return pl; };
+  const rivals = Array.from({ length:K1 }, staticSet);
+  const np = nearestPlayer(state, myPos);
+  const near = dist(myPos, state[np].pos) <= 1;                        // a player is up in our face
+  const aimAt = () => state[Math.random() < 0.7 ? np : live[rnd(live.length)]].pos;   // who this candidate is aimed at
   const cands = [];
-  for (let i=0; i<350; i++){
-    const m = i%4;
-    cands.push(style==='brawler'
-      ? (m ? chasePlan(state[k].pos, state.p.pos) : randomPlan(state[k].pos))
-      : (m===0 ? randomPlan(state[k].pos) : m===1 ? snipePlan(state[k].pos, state.p.pos) : m===2 ? kitePlan(state[k].pos, state.p.pos) : approachPlan(state[k].pos, state.p.pos)));
+  for (let i=0; i<NC; i++){
+    const tp = aimAt();
+    if (style==='brawler'){ const m = i%4; cands.push(m ? chasePlan(myPos, tp) : randomPlan(myPos)); }          // chase the chosen target (no ranged)
+    else if (style==='sniper'){ const m = i%4; cands.push(m===0 ? randomPlan(myPos) : m===1 ? snipePlan(myPos, tp) : m===2 ? kitePlan(myPos, tp) : approachPlan(myPos, tp)); }
+    else {                                                                                                     // hybrid: mostly melee chases, sometimes back off and shoot
+      const m = i%6;
+      if (m===0) cands.push(randomPlan(myPos));
+      else if (m===1) cands.push(chasePlan(myPos, tp));
+      else if (m<4){ PSHOOT = false; cands.push(chasePlan(myPos, tp)); PSHOOT = true; }
+      else cands.push(m===4 ? kitePlan(myPos, tp) : approachPlan(myPos, tp));
+    }
   }
-  for (let c=0; c<N*N; c++) cands.push(...coveragePlans(state[k].pos, c));
+  for (let c=0; c<N*N; c++) cands.push(...coveragePlans(myPos, c));
+  // Guard variants: swap one 1-AP melee for a guard at each timing, so guards are tested on purpose (a block earns +1 AP next round).
+  for (let q = 0, base = cands.length; q < GUARD_VARIANTS; q++){
+    const c = cands[rnd(base)].slice(), idx = c.map((a, j) => j).filter(j => c[j].t==='melee');
+    if (!idx.length) continue;
+    c[idx[rnd(idx.length)]] = mk('guard'); cands.push(c);
+  }
 
-  const scored = [];
+  const P0 = PLAYERS.length, scored = [], STY = STYLE_AI[style];
   for (const cand of cands){
-    const epos = j => { let p = state[k].pos; for (let q=0; q<=j && q<cand.length; q++) if (cand[q].t==='move') p = cand[q].to; return p; };
-    const mine = [...rivals, ...Array.from({length:8}, () => smartPlan(state.p.pos, epos)),
-                  ...Array.from({length:16}, () => evadePlan(state.p.pos, epos))];
-    let tot = 0, kills = 0;
+    const epos = j => { let p = myPos; for (let q=0; q<=j && q<cand.length; q++) if (cand[q].t==='move') p = cand[q].to; return p; };
+    const dyn = () => { const pl = {}; for (const u of live) pl[u] = gen(u, () => Math.random() < 0.33 ? smartPlan(state[u].pos, epos) : evadePlan(state[u].pos, epos)); return pl; };
+    const mine = [...rivals, ...Array.from({ length:K2 }, dyn)];
+    let tot = 0, lethal = 0;
     for (const r of mine){
-      const f = simulate(state, { ...chosen, p:r, [k]:cand }).state, d = dist(f[k].pos, f.p.pos);
-      if (f.p.hp <= 0) kills++;
-      tot += (style==='brawler' ? 0.4 : 0.9)*f[k].hp - 1.5*f.p.hp;      // sniper protects itself more
+      const f = simulate(state, { ...chosen, ...r, [k]:cand }).state;
+      const L = livePlayers(f), d = L.length ? Math.min(...L.map(p => dist(f[k].pos, f[p].pos))) : 0;
+      const dead = live.filter(p => f[p].hp <= 0).length;
+      if (f[k].earn && alive(f,k)) lethal += STY.earn;                  // a guard that really blocks is an investment (+1 AP next round)
+      lethal += L.length===0 ? 8 : 3*dead;                              // a chance to finish players off beats any style
+      tot += STY.hp*f[k].hp - 1.5*PLAYERS.reduce((a,p) => a + f[p].hp, 0)/P0;   // sniper protects itself more
       tot += style==='brawler' ? -0.5*d + (d===0 ? 0.6 : 0)              // brawler wants your square
-                               : 0.6*Math.min(d,2) - (d===0 ? 0.8 : 0) - (d > AP-1 ? 1.5 : 0);   // sniper wants range, hates your square (can't shoot you there), and never wants to end out of shooting reach
+           : style==='hybrid'  ? -0.2*d + (d===0 ? 0.3 : 0)              // hybrid likes being close but doesn't insist
+                               : 0.6*Math.min(d,2) - (d===0 ? 0.8 : 0) - (d > apOf(k,state)-1 ? 1.5 : 0);   // sniper wants range, hates your square (can't shoot you there), and never wants to end out of shooting reach
     }
     // Taste for the style's own actions.
     const count = t => cand.filter(a => a.t===t).length;
-    let sc = tot/mine.length;
+    let sc = tot/mine.length + lethal/mine.length;
     // Repeated swings at one square only pay off if you stand still, so each melee beyond the first on the same square costs score.
     const swung = new Set(); let repeats = 0;
     cand.forEach((a, q) => { if (a.t==='melee'){ const c = epos(q); if (swung.has(c)) repeats++; swung.add(c); } });
     sc -= 0.9*repeats;
-    if (style==='brawler') sc += 0.35*Math.min(count('melee'),1) + 0.08*Math.max(0,count('melee')-1) -0.25*cand.filter(a => a.t==='ranged' && a.cost>=3).length;
-    else {
-      sc += 0.35*count('ranged') - (near ? 0.5 : 0.3)*count('melee') + (near ? 0.3*count('guard') : 0);
-      if (near && dist(projPos(cand, state[k].pos), state.p.pos) > dist(state[k].pos, state.p.pos)) sc += 1.1;   // running away beats guarding/melee
+    if (style==='brawler') sc += 0.35*Math.min(count('melee'),1) + 0.08*Math.max(0,count('melee')-1) - 0.25*cand.filter(a => a.t==='ranged' && a.cost>=3).length;
+    else if (style==='hybrid'){
+      sc += 0.35*Math.min(count('melee'),1) + 0.08*Math.max(0,count('melee')-1) + 0.12*Math.min(count('ranged'),2);   // prefers melee, shoots when it makes room
+      if (near && state[k].hp <= HP_E/2 && dist(projPos(cand, myPos), state[np].pos) > dist(myPos, state[np].pos)) sc += 0.8;   // hurt and cornered: make distance
+    } else {
+      // sniper: ranged first; with a player in its face the first priority is to move away, then it chooses between guard and melee
+      sc += 0.35*count('ranged') - (near ? 0.2 : 0.3)*count('melee') + (near ? 0.2*count('guard') : 0);
+      if (near && dist(projPos(cand, myPos), state[np].pos) > dist(myPos, state[np].pos)) sc += 1.1;
     }
-    sc += 8 * kills/mine.length;                                         // a chance to finish you beats any style
+    sc -= 0.15*Math.max(0, count('guard') - 1);                          // the charge caps at +1 AP, so a second guard adds little
     scored.push({ cand, sc });
   }
   // Pick among near-best plans so the enemies don't always do the same thing.
@@ -447,29 +603,47 @@ for (let i=0; i<N*N; i++){
   b.addEventListener('mouseleave', () => paintTrack(null));
   board.appendChild(b);
 }
-$('top').innerHTML = ALL.map(k => `<div class="side ${k}" id="side_${k}"><h2>${UNITS[k].name} ${UNITS[k].tok}${STYLE[k]?` · ${STYLE[k].label}`:''}</h2>
-  <div class="hp"><i id="hp_${k}"></i></div><div class="meta" id="m_${k}"></div>${STYLE[k]?`<div class="meta">${STYLE[k].desc}</div>`:''}</div>`).join('');
+function buildCards(){
+  const card = k => `<div class="side${isPlayer(k) ? ' pc' : ''}" id="side_${k}" style="--c:${COL[k]}">`
+    + `<h2>${UNITS[k].tok} ${UNITS[k].name}${UNITS[k].style ? `<span class="sty">${STYLE_LABEL[UNITS[k].style]}</span>` : ''}</h2>`
+    + `<div class="hp"><i id="hp_${k}"></i></div><div class="res"><span class="meta" id="m_${k}"></span><span class="ap" id="ap_${k}"></span></div></div>`;
+  $('pcol').dataset.title = PLAYERS.length > 1 ? 'YOUR PARTY' : 'YOU'; $('ecol').dataset.title = 'ENEMIES';
+  $('pcol').innerHTML = PLAYERS.map(card).join(''); $('ecol').innerHTML = ENEMIES.map(card).join('');
+  PLAYERS.forEach(p => $('side_'+p).onclick = () => { if (phase==='plan' && alive(S,p)){ sel = p; mode = null; pending = null; render(); } });   // click a card to order that character
+}
 
-function planRows(plan){ return plan.map((a,i) => `<li><b>${i+1}.</b>${ICON[a.t]} ${describe(a)}</li>`).join(''); }
-function planBadges(plan, start, cls, out){
+function planBadges(plan, start, k, out){
   let pos = start;
   plan.forEach((a,i) => {
     let c = pos;
     if (a.t==='move'){ c = a.to; pos = a.to; } else if (a.t==='ranged') c = a.at;
-    (out[c] = out[c] || []).push(`<span class="bdg ${cls}">${i+1}${ICON[a.t]}</span>`);
+    (out[c] = out[c] || []).push(`<span class="bdg" style="--c:${COL[k]}">${i+1}${ICON[a.t]}</span>`);
   });
   return out;
 }
 
+// Best guess of how many units will be on `cell` once the moves of step `step` are done, from the plans made so far (not counting `except`).
+function occAt(cell, step, except){
+  let n = 0;
+  for (const k of ALL){
+    if (k===except || !alive(S,k)) continue;
+    const plan = isPlayer(k) ? myPlans[k] : foePlans[k];
+    let pos = S[k].pos;
+    for (let j=0; j<=step && j<plan.length; j++) if (plan[j].t==='move') pos = plan[j].to;
+    if (pos===cell) n++;
+  }
+  return n;
+}
+const squareFull = i => occAt(i, myPlans[sel].length, sel) >= CAP;
 function canCell(i){
-  if (phase!=='plan' || !mode || pending) return null;
-  const pos = projPos(myPlan, S.p.pos), ap = left(myPlan);
-  if (mode==='move') return adj(pos,i) && ap>=1 ? 1 : null;
+  if (phase!=='plan' || !mode || pending || !sel) return null;
+  const pos = projPos(myPlans[sel], S[sel].pos), ap = left(myPlans[sel], sel);
+  if (mode==='move'){ const c = dist(pos,i); return i!==pos && c<=ap && !squareFull(i) ? c : null; }
   if (mode==='ranged'){ if (i===pos) return null; const c = 1 + dist(pos,i); return c<=ap ? c : null; }
   return null;
 }
 
-// Highlight the squares between your (projected) position and a hovered ranged target.
+// Highlight the squares between the selected character's (projected) position and a hovered ranged target.
 function setTrack(cells){
   [...board.children].forEach((el,i) => {
     const n = cells.indexOf(i);
@@ -478,44 +652,55 @@ function setTrack(cells){
   });
 }
 function paintTrack(i){
-  if (i===null || phase!=='plan' || mode!=='ranged' || !canCell(i)) return setTrack([]);
-  setTrack(track(projPos(myPlan, S.p.pos), i));
+  if (i===null || phase!=='plan' || (mode!=='ranged' && mode!=='move') || !canCell(i)) return setTrack([]);
+  setTrack(track(projPos(myPlans[sel], S[sel].pos), i));
 }
 
 function render(flash=[], trail=[]){
   const planning = phase==='plan';
+  if (planning && sel && !alive(S, sel)) sel = PLAYERS.find(p => alive(S,p));
   const badges = {};
   if (planning){ for (const k of ENEMIES) if (alive(S,k)) planBadges(foePlans[k], S[k].pos, k, badges);
-                 planBadges(myPlan, S.p.pos, 'p', badges); }
-  const ppos = planning ? projPos(myPlan, S.p.pos) : S.p.pos;
+                 for (const p of PLAYERS) if (alive(S,p)) planBadges(myPlans[p], S[p].pos, p, badges); }
+  const ppos = planning && sel ? projPos(myPlans[sel], S[sel].pos) : -1;
   [...board.children].forEach((el,i) => {
     const can = canCell(i);
     el.className = 'cell' + (can ? ' can' : '') + (flash.includes(i) ? ' flash' : '');
+    const here = ALL.filter(k => alive(S,k) && S[k].pos===i);
+    el.dataset.crowd = here.length;                                   // the more units on a square, the smaller their icons
+    el.style.setProperty('--k', [.36, .36, .30, .25, .25][here.length] ?? .2);
     el.innerHTML = `<span class="name">${cname(i)}</span>` +
-      ALL.filter(k => alive(S,k) && S[k].pos===i).map(k => `<span class="tok" data-u="${k}">${UNITS[k].tok}${S[k].g?'<i class="shield">🛡️</i>':''}</span>`).join('') +
+      here.map(k =>`<span class="tok${planning && k===sel && PLAYERS.length>1 ? ' sel' : ''}" data-u="${k}" style="--c:${COL[k]}">${UNITS[k].tok}${S[k].g?'<i class="shield">🛡️</i>':''}</span>`).join('') +
       `<span class="badges">${(badges[i]||[]).join('')}</span>` +
-      (can && mode==='ranged' ? `<span class="cost">${can} AP</span>` : '') +
-      (planning && ppos===i && ppos!==S.p.pos ? '<span class="cost" style="left:6px;right:auto;color:var(--you)">you end</span>' : '');
+      (can && (mode==='ranged' || mode==='move') ? `<span class="cost">${can} AP</span>` : '') +
+      (planning && mode==='move' && !can && !pending && sel && i!==ppos && dist(ppos, i) <= left(myPlans[sel], sel) && squareFull(i) ? '<span class="cost" style="color:#ff5c6c">full</span>' : '') +
+      (planning && ppos===i && ppos!==S[sel].pos ? `<span class="cost" style="left:8px;right:auto;bottom:5px;color:${COL[sel]}">ends here</span>` : '');
   });
   setTrack(trail);
+  // AP dots: base AP in the unit's colour, plus one gold dot when it holds a guard-charge bonus (blinks until used: it is gone after this round).
+  const pips = (n, k) => { let h = '';
+    for (let j = 0; j < apOf(k); j++){ const full = j < n; h += j >= AP ? `<span class="bpip${full && phase==='plan' ? ' blink' : ''}">${full ? '●' : '○'}</span>` : (full ? '●' : '○'); }
+    return h; };
   for (const k of ALL){
-    const maxHp = k==='p' ? HP_P : HP_E;
+    const maxHp = isPlayer(k) ? HP_P : HP_E, plan = (isPlayer(k) ? myPlans : foePlans)[k];
     $('hp_'+k).style.width = S[k].hp/maxHp*100 + '%';
-    $('m_'+k).textContent = alive(S,k) ? `HP ${S[k].hp}/${maxHp}${S[k].g?' · guarding':''}` : 'Defeated';
+    $('m_'+k).textContent = alive(S,k) ? `HP ${S[k].hp}/${maxHp}${S[k].g?' · 🛡':''}` : 'Defeated';
+    $('ap_'+k).innerHTML = alive(S,k) ? `AP ${pips(plan ? left(plan, k) : apOf(k), k)}${S[k].earn ? ' <span class="bpip pop" title="+1 AP next round">+●</span>' : ''}` : '';          // AP left to plan (enemies show what their plan spends)
     $('side_'+k).classList.toggle('dead', !alive(S,k));
+    $('side_'+k).classList.toggle('on', planning && k===sel);
   }
-  const ap = left(myPlan);
-  $('pips').textContent = '●'.repeat(ap) + '○'.repeat(AP-ap);
+  const apLeft = sel && myPlans[sel] ? left(myPlans[sel], sel) : 0;
   document.querySelectorAll('button.act').forEach(b => {
     b.classList.toggle('sel', mode===b.dataset.a);
-    b.disabled = !planning || ap<1 || !!pending;
+    b.disabled = !planning || apLeft < (b.dataset.a==='ranged' ? 2 : 1) || !!pending;   // ranged costs at least 2 AP
   });
   $('pick').innerHTML = planning && pending ? `Several enemies will be on that square — hit which one?<div class="btns">${
     pending.c.map(k => `<button class="sm" data-pick="${k}">${UNITS[k].tok} ${UNITS[k].name}</button>`).join('')}</div>` : '';
   document.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
-    myPlan[pending.i].tgt = b.dataset.pick; pending = null; render();
+    myPlans[pending.u][pending.i].tgt = b.dataset.pick; pending = null; render();
   });
-  $('undo').disabled = !planning || !myPlan.length; $('clear').disabled = $('undo').disabled;
+  const none = !planning || !sel || !myPlans[sel].length;
+  $('undo').disabled = none; $('clear').disabled = none;
   $('fight').disabled = !planning || !!pending;
 }
 
@@ -529,30 +714,39 @@ function enemyPosAt(k, i){
   return pos;
 }
 function afterAttack(){
-  const i = myPlan.length-1, a = myPlan[i];
-  const cell = a.t==='melee' ? projPos(myPlan, S.p.pos) : a.at;
+  const plan = myPlans[sel], i = plan.length-1, a = plan[i];
+  const cell = a.t==='melee' ? projPos(plan, S[sel].pos) : a.at;
   const c = ENEMIES.filter(k => alive(S,k) && enemyPosAt(k,i)===cell);
   if (a.t==='melee' && c.some(k => foePlans[k][i]?.t==='melee')){ a.clash = true; return; }   // clash: no target choice
-  if (c.length===1) a.tgt = c[0]; else if (c.length>1) pending = { i, c };
+  if (c.length===1) a.tgt = c[0]; else if (c.length>1) pending = { i, c, u:sel };
+}
+// When the selected character is out of AP, jump to the next one that still has some.
+function afterAction(){
+  if (left(myPlans[sel], sel) > 0 || pending) return;
+  const next = PLAYERS.filter(p => alive(S,p) && left(myPlans[p], p) > 0);
+  if (next.length){ const at = PLAYERS.indexOf(sel); sel = next.find(p => PLAYERS.indexOf(p) > at) || next[0]; }
 }
 function onCell(i){
+  if (phase==='plan' && !mode && !pending){          // click a character to select it (click again to cycle through a shared square)
+    const here = PLAYERS.filter(p => alive(S,p) && S[p].pos===i);
+    if (here.length){ sel = here[(here.indexOf(sel) + 1) % here.length]; render(); return; }
+  }
   const c = canCell(i); if (!c) return;
-  if (mode==='move') myPlan.push(mk('move',{to:i}));
-  else { myPlan.push(mkRanged(projPos(myPlan, S.p.pos), i)); afterAttack(); }
-  mode = null; render();
+  if (mode==='move') myPlans[sel].push(mk('move',{to:i, cost:c}));
+  else { myPlans[sel].push(mkRanged(projPos(myPlans[sel], S[sel].pos), i)); afterAttack(); }
+  mode = null; afterAction(); render();
 }
 document.querySelectorAll('button.act').forEach(b => b.addEventListener('click', () => {
   const t = b.dataset.a;
-  if (t==='melee' || t==='guard'){ myPlan.push(mk(t)); if (t==='melee') afterAttack(); mode = null; }
+  if (t==='melee' || t==='guard'){ myPlans[sel].push(mk(t)); if (t==='melee') afterAttack(); mode = null; afterAction(); }
   else mode = mode===t ? null : t;
   render();
 }));
-$('undo').onclick = () => { myPlan.pop(); pending = null; mode = null; render(); };
-$('clear').onclick = () => { myPlan = []; pending = null; mode = null; render(); };
+$('undo').onclick = () => { myPlans[sel].pop(); pending = null; mode = null; render(); };
+$('clear').onclick = () => { myPlans[sel] = []; pending = null; mode = null; render(); };
 $('fight').onclick = battle;
 
 /* ---------- attack animations ---------- */
-const FXCOL = { p:'#4aa3ff', a:'#ff5c6c', b:'#ffa24a' };
 const $fx = $('fx'), $wrap = $('boardwrap');
 // The board is as big as the screen allows; animation sizes follow the square size (U = square size / 110px).
 let U = 1;
@@ -576,13 +770,13 @@ function fxAdd(el, ms){ $fx.appendChild(el); return new Promise(r => setTimeout(
 const SWORD = '<svg width="22" height="36" viewBox="0 0 22 36"><polygon points="11,0 15,24 7,24" fill="#e6ecf7" stroke="#8d97ab" stroke-width="1"/><rect x="3" y="24" width="16" height="3" rx="1" fill="#e0b34a"/><rect x="9.5" y="27" width="3" height="6" fill="#7a4b27"/><circle cx="11" cy="34.5" r="2" fill="#e0b34a"/></svg>';
 const BOW = '<svg width="40" height="40" viewBox="-20 -20 40 40"><path d="M -3 -17 Q 12 0 -3 17" fill="none" stroke="#a8693a" stroke-width="3.5" stroke-linecap="round"/><line x1="-3" y1="-17" x2="-3" y2="17" stroke="#e8e8e8" stroke-width="1"/></svg>';
 const toward = (k, cell, mid) => {                 // angle (rad, 0 = right) from the attacker's token to the unit it strikes
-  const foes = k==='p' ? ENEMIES : ['p'], act = null;
+  const foes = isPlayer(k) ? ENEMIES : PLAYERS;
   const t = foes.find(v => alive(mid,v) && mid[v].pos===cell);
   const a = unitCenter(k, cell), b = t ? unitCenter(t, cell) : a;
-  return Math.hypot(b.x-a.x, b.y-a.y) > 4 ? Math.atan2(b.y-a.y, b.x-a.x) : (k==='p' ? 0 : Math.PI);
+  return Math.hypot(b.x-a.x, b.y-a.y) > 4 ? Math.atan2(b.y-a.y, b.x-a.x) : (isPlayer(k) ? 0 : Math.PI);
 };
 function swingAnim(k, cell, mid){          // sword held out from the attacker, hilt near them, tip outward, sweeping across the target
-  const col = FXCOL[k], { x, y } = unitCenter(k, cell), el = document.createElement('div');
+  const col = COL[k], { x, y } = unitCenter(k, cell), el = document.createElement('div');
   const dir = toward(k, cell, mid) * 180/Math.PI + 90;          // CSS angle at which "up" (blade direction) faces the target
   el.className = 'fx-swing'; el.style.left = x+'px'; el.style.top = y+'px'; el.style.setProperty('--c', col);
   el.innerHTML = '<i class="arc"></i>' + SWORD;
@@ -593,7 +787,7 @@ function swingAnim(k, cell, mid){          // sword held out from the attacker, 
   return new Promise(r => setTimeout(() => { el.remove(); r(); }, 650));
 }
 function shootAnim(k, from, to){            // bow held toward the target; arrow leaves it and flies along the same line
-  const col = FXCOL[k], a = unitCenter(k, from), b = center(to), ang = Math.atan2(b.y-a.y, b.x-a.x), deg = ang*180/Math.PI;
+  const col = COL[k], a = unitCenter(k, from), b = center(to), ang = Math.atan2(b.y-a.y, b.x-a.x), deg = ang*180/Math.PI;
   const bx = a.x + Math.cos(ang)*20*U, by = a.y + Math.sin(ang)*20*U;    // bow sits just in front of the archer
   const bow = document.createElement('div'); bow.className = 'fx-bow'; bow.style.left = bx+'px'; bow.style.top = by+'px';
   bow.style.setProperty('--c', col); bow.innerHTML = BOW;
@@ -616,22 +810,24 @@ const MOUSE = side => `<svg viewBox="0 0 20 28"><rect x="1" y="1" width="18" hei
   + `<path d="${side==='L' ? 'M10 1 A9 9 0 0 0 1 10 L1 13 L10 13 Z' : 'M10 1 A9 9 0 0 1 19 10 L19 13 L10 13 Z'}" fill="#ffd84a"/>`
   + `<line x1="10" y1="1" x2="10" y2="13" stroke="#8d97ab" stroke-width="1.2"/></svg>`;
 // The clashing square zooms to the middle of the board, the other squares dim, and the click prompts float above it.
-// Prompts: sword = left click, shield = right click. Resolves 'win' or 'lose'.
-function runClash(clashers, cell){
+// Prompts: sword = left click, shield = right click. Resolves 'win' or 'lose' for the player side.
+function runClash(clash){
+  const { cell, players, enemies } = clash;
   return new Promise(resolve => {
-    const rolls = clashers.map(k => { const c = UNITS[k].clash || { min:3, max:6 }; return c.min + rnd(c.max - c.min + 1); });
-    const n = rolls.reduce((a, b) => a + b, 0);   // prompts add up: every clashing enemy lengthens the row, the miss limit stays fixed
+    const rolls = enemies.map(k => { const c = UNITS[k].clash || { min:3, max:6 }; return c.min + rnd(c.max - c.min + 1); });
+    const n = rolls.reduce((a, b) => a + b, 0);   // prompts add up over the enemies in this clash; the miss limit stays fixed
     const seq = Array.from({ length:n }, () => Math.random() < 0.5 ? 'L' : 'R');
     const marks = [];                              // 'ok' | 'bad' per answered prompt
     const layer = $('clashlayer'), W = $wrap.clientWidth, H = $wrap.clientHeight;
     const S = Math.min(W * 0.44, H * 0.36), sx = (W - S) / 2, sy = H * 0.66 - S / 2;    // the magnified square
-    const sw = S * (clashers.length > 1 ? 0.34 : 0.40), fs = S * (0.86 - sw / S) / ((1 + clashers.length) * 1.15);   // everyone + the swords fit inside the square
+    const crowd = players.length + enemies.length;
+    const sw = S * (crowd > 2 ? 0.30 : 0.40), fs = Math.min(S * 0.3, S * (0.88 - sw / S) / (crowd * 1.15));   // everyone + the swords fit inside the square
     const tok = ks => ks.map(k => `<span style="font-size:${fs}px;line-height:1">${UNITS[k].tok}</span>`).join('');
     layer.innerHTML = `<div class="zrow"></div>`
       + `<div class="zslot" style="left:${sx}px;top:${sy}px;width:${S}px;height:${S}px"><span class="zname">${cname(cell)}</span>`
-      + `<div class="zside">${tok(['p'])}</div>`
-      + `<div class="zswords" style="width:${sw}px;height:${sw}px"><div class="cs" style="--c:${FXCOL.p}">${SWORD}</div><div class="cs" style="--c:${FXCOL[clashers[0]]}">${SWORD}</div></div>`
-      + `<div class="zside">${tok(clashers)}</div></div>`;
+      + `<div class="zside">${tok(players)}</div>`
+      + `<div class="zswords" style="width:${sw}px;height:${sw}px"><div class="cs" style="--c:${COL[players[0]]}">${SWORD}</div><div class="cs" style="--c:${COL[enemies[0]]}">${SWORD}</div></div>`
+      + `<div class="zside">${tok(enemies)}</div></div>`;
     layer.style.display = 'block';
     const row = layer.querySelector('.zrow'), slot = layer.querySelector('.zslot');
     row.style.bottom = (H - sy + 14) + 'px';
@@ -657,7 +853,7 @@ function runClash(clashers, cell){
     const fails = () => marks.filter(m => m==='bad').length;
     const draw = (note = '') => {
       row.style.setProperty('--w', w + 'px');
-      row.innerHTML = `<div class="zt">⚔️ CLASH! ⚔️</div><div class="zs">Left click ⚔️ attack · Right click 🛡️ guard</div>`
+      row.innerHTML = `<div class="zt">⚔️ CLASH! ⚔️</div><div class="zv">${names(players)} vs ${names(enemies)}</div><div class="zs">Left click ⚔️ attack · Right click 🛡️ guard</div>`
         + `<div class="crow">${seq.map((s, j) => `<div class="ci ${marks[j] || (j===idx && !note.includes('—') ? 'cur' : '')}"><span class="ic">${s==='L' ? '⚔️' : '🛡️'}</span>${MOUSE(s)}</div>`).join('')}</div>`
         + `<div class="miss">Misses ${'✖'.repeat(fails())}${'◻'.repeat(CLASH_MAX_FAILS - fails())} ${note}</div>`;
     };
@@ -686,14 +882,13 @@ function runClash(clashers, cell){
   });
 }
 function playFx(st){
-  const jobs = [];
+  const jobs = [], clashing = new Set(st.clashes.flatMap(c => [...c.players, ...c.enemies]));   // clashing swords already played in the minigame
   for (const k in st.fire){
     const a = st.fire[k];
-    const inClash = k==='p' ? st.clashers.length > 0 : st.clashers.includes(k);   // clashing swords already played in the minigame
-    if (a.t==='melee' && !inClash) jobs.push(swingAnim(k, st.mid[k].pos, st.mid));
+    if (a.t==='melee' && !clashing.has(k)) jobs.push(swingAnim(k, st.mid[k].pos, st.mid));
     else if (a.t==='ranged') jobs.push(shootAnim(k, st.mid[k].pos, a.at));
   }
-  if (st.clash !== null) jobs.push(sleep(250).then(() => sparkAnim(st.clash)));
+  for (const c of st.clashes) jobs.push(sleep(250).then(() => sparkAnim(c.cell)));
   return Promise.all(jobs);
 }
 
@@ -720,61 +915,76 @@ function slideTokens(before, ms = 450){
 }
 async function battle(){
   if (phase!=='plan') return;
-  phase = 'battle'; mode = null;
-  const plans = { p:myPlan, a:foePlans.a, b:foePlans.b };
-  const cur = clone(S);                          // the battle is resolved one step at a time (a clash is decided by the player's clicks)
+  phase = 'battle'; mode = null; pending = null;
+  const plans = { ...myPlans, ...foePlans };
+  const cur = clone(S);                          // the battle is resolved one step at a time (clashes are decided by the player's clicks)
   say('Battle!'); render();
   logLine(`— Round ${round} —`);
-  for (let i=0; i<AP; i++){
-    const probe = simulateStep(clone(cur), plans, i, () => 'win');   // preview of this step: who moves, whether a clash happens
+  const stepsTotal = AP + (ALL.some(k => alive(cur,k) && cur[k].bonus) ? 1 : 0);
+  for (let i=0; i<stepsTotal; i++){
+    const seed = (Math.random() * 4294967296) >>> 0;                   // preview and real resolution of a step share one seed
+    const probe = simulateStep(clone(cur), plans, i, () => 'win', null, seed);   // preview of this step: who moves, who clashes with whom
     if (!probe) continue;
     await sleep(850);
-    say(`Round ${round} — step ${i+1} of ${AP}`);
+    say(`Round ${round} — step ${i+1} of ${stepsTotal}`);
     let before = tokenCenters();
     S = clone(probe.mid); render();              // everyone moves/guards first (tokens slide to their new squares)...
     await slideTokens(before);
-    const outcome = probe.clashers.length ? await runClash(probe.clashers, probe.clash) : null;   // ...a clash plays out as a minigame...
-    const st = simulateStep(cur, plans, i, () => outcome);
+    const outcomes = [];
+    for (let j = 0; j < probe.clashes.length; j++) outcomes[j] = await runClash(probe.clashes[j]);   // ...each player character's clash plays out as a minigame...
+    const st = simulateStep(cur, plans, i, (cl, idx) => outcomes[idx], probe.clashes, seed);
     await playFx(st);                            // ...then the attacks play out...
     logLine(`Step ${i+1} (all at once):`);
     st.log.forEach(logLine);
     before = tokenCenters();
-    S = clone(st.snap); render(st.hitCells, st.trail);   // ...the damage lands and knocked-back units slide away
+    S = clone(st.snap); render(st.hitCells);   // ...the damage lands and knocked-back units slide away
     await slideTokens(before);
-    if (!alive(cur,'p') || ENEMIES.every(e => !alive(cur,e))) break;
+    if (teamDown(cur, PLAYERS) || teamDown(cur, ENEMIES)) break;
   }
   await sleep(850);
   for (const k of ALL) S[k].g = false;
-  const won = ENEMIES.every(k => !alive(S,k)), lost = !alive(S,'p');
+  const won = teamDown(S, ENEMIES), lost = teamDown(S, PLAYERS);
   if (won || lost){
     phase = 'over'; render();
     say(won && lost ? 'Draw!' : won ? 'You win! 🎉' : 'You lose…');
     $('fight').disabled = false; $('fight').textContent = 'Play again'; $('fight').onclick = newGame;
     return;
   }
+  for (const k of ALL){ S[k].bonus = alive(S,k) && S[k].earn ? 1 : 0; S[k].earn = false; }   // a successful guard charges +1 AP for next round only
   round++; newRound();
 }
-function newRound(){
-  phase = 'plan'; mode = null; pending = null; myPlan = []; foePlans = { a:[], b:[] };
+async function newRound(){
+  phase = 'ai'; mode = null; pending = null; myPlans = {}; foePlans = {};
+  PLAYERS.forEach(p => myPlans[p] = []); ENEMIES.forEach(e => foePlans[e] = []);
+  sel = PLAYERS.find(p => alive(S,p));
+  say('The enemies are planning…'); render();
+  await sleep(30);                                // let the screen update before the AI thinks
   for (const k of ENEMIES) if (alive(S,k)) foePlans[k] = aiPlan(S, k, foePlans);
-  say(`Round ${round} — plan your ${AP} AP.`); render();
+  phase = 'plan';
+  const bon = PLAYERS.filter(p => alive(S,p) && S[p].bonus);
+  say((PLAYERS.length > 1 ? `Round ${round} — plan each character's ${AP} AP.` : `Round ${round} — plan your ${AP} AP.`) + (bon.length ? ` ⚡ ${names(bon)} ${bon.length>1 || UNITS[bon[0]].name==='You' ? 'have' : 'has'} +1 bonus AP this round only — use it or lose it!` : '')); render();
 }
+const setV = (c, v) => document.querySelectorAll('.v-'+c).forEach(e => e.textContent = v);
 function newGame(){
-  // You start on the left edge, in the middle; enemies start on random, different squares of the right edge.
-  const rightEdge = [...Array(N).keys()].map(y => y*N + N-1).sort(() => Math.random()-0.5);
-  S = { p:{pos:((N-1)>>1)*N, hp:HP_P, g:false}, a:{pos:rightEdge[0], hp:HP_E, g:false}, b:{pos:rightEdge[1], hp:HP_E, g:false} };
+  const enc = ENCOUNTERS[N], np = enc.players, styles = enemyStyles(N), ne = styles.length;
+  buildUnits(np, styles); buildCards();
+  // Your party starts spread along the left edge; the enemies start on random, different squares of the right side.
+  const rightSide = [...Array(N*N).keys()].filter(c => xy(c).x >= (N > 3 ? N-2 : N-1)).sort(() => Math.random()-0.5);
+  S = {};
+  PLAYERS.forEach((p, i) => S[p] = { pos:Math.floor((i + 0.5) * N / np) * N, hp:HP_P, g:false, bonus:0, earn:false });
+  ENEMIES.forEach((e, i) => S[e] = { pos:rightSide[i], hp:HP_E, g:false, bonus:0, earn:false });
+  setV('np', np); setV('nps', np > 1 ? 's' : ''); setV('ne', ne);
   round = 1; $('log').innerHTML = ''; $('fight').textContent = 'Fight!'; $('fight').onclick = battle;
   newRound();
 }
-// Version bar: switch board size, tune numbers (Apply reloads the page and restarts the match)
+// Tuning menu: switch map size, tune numbers (Apply reloads the page and restarts the match)
 (function(){
   const link = n => `<a href="?n=${n}" class="${n===N?'on':''}">${n}×${n}</a>`;
   const f = (id, label, v) => `<label>${label} <input type="number" min="1" id="t_${id}" value="${v}"></label>`;
-  $('vbar').innerHTML = link(3) + '<span>|</span>' +f('ap','AP',AP) + f('hp','Your HP',HP_P) + f('ehp','Enemy HP',HP_E) + f('dmg','Damage',DMG)
+  $('vbar').innerHTML = [3,4,5].map(link).join('') + '<span>|</span>' + f('ap','AP',AP) + f('hp','Player HP',HP_P) + f('ehp','Enemy HP',HP_E) + f('dmg','Damage',DMG)
     + '<button class="sm" id="t_go">Apply</button><a href="?n=' + N + '">Reset</a>';
   $('t_go').onclick = () => { location.search = `?n=${N}&ap=${$('t_ap').value}&hp=${$('t_hp').value}&ehp=${$('t_ehp').value}&dmg=${$('t_dmg').value}`; };
-  const set = (c, v) => document.querySelectorAll('.v-'+c).forEach(e => e.textContent = v);
-  set('hp',HP_P); set('ehp',HP_E); set('ap',AP); set('dmg',DMG); set('reach',Math.max(0,AP-1));
+  setV('hp',HP_P); setV('ehp',HP_E); setV('ap',AP); setV('dmg',DMG); setV('reach',Math.max(0,AP-1));
   document.title = 'Joseon Duel ' + N + '×' + N;
 })();
 newGame();

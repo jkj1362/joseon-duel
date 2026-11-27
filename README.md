@@ -6,7 +6,7 @@ You (8 HP) fight two enemies (8 HP each) on a 3×3 grid. Each round everyone pla
 
 | Action | Cost | Effect |
 |---|---|---|
-| Move | 1 | One square, diagonals allowed |
+| Move | 1 per square | Up to as far as your AP allows in one go, diagonals allowed |
 | Melee | 1 | Hits one opponent in your own square |
 | Ranged | 1 + distance (min 2) | Hits one opponent in a *different* square; hover a target to see the track |
 | Guard | 1 | Blocks one hit on the step it is played |

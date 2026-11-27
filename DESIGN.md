@@ -34,22 +34,34 @@ A small, readable, turn-based tactics duel played on a tiny grid. Each round the
 
 | Item | Value |
 |---|---|
-| Board | 3×3 (squares named A1–C3). Larger sizes exist in code but are closed for now (see §8). |
-| Player ("You") | 8 HP |
-| Enemy A — *Melee Chaser* | 8 HP |
-| Enemy B — *Ranged Sniper* | 8 HP |
-| AP per round | Depends on map size: 3×3 → 3, 4×4 → 4, 5×5 → 5 (tunable) |
+| Map | 3×3, 4×4 or 5×5 (squares named A1…). Pick it in the Tuning menu; the page opens on 3×3. |
+| HP | 8 for every character, player and enemy |
+| AP per round | **Per character**, and set by map size: 3×3 → 3, 4×4 → 4, 5×5 → 5 (tunable). Nothing is shared across a team. |
 | Damage per hit | 2 |
 
-Start positions: you start on the **left edge, middle row**. The enemies start on **different random squares of the right edge**.
+**Who fights on each map**
 
-Everyone may share a square. There is no friendly fire.
+| Map | Your party | Enemies |
+|---|---|---|
+| 3×3 | 1 character ("You") | 2 — Melee Chaser + Ranged Sniper |
+| 4×4 | 2 characters | 3 — Melee Chaser + Hybrid Fighter + Ranged Sniper |
+| 5×5 | 3 characters | 4 or 5 — one Ranged Sniper plus 3–4 Melee Chasers / Hybrid Fighters (random mix, never all the same type) |
+
+The line-up is drawn each game by `enemyStyles(N)`. Hybrid Fighters first appear on 4×4.
+
+**Start positions.** Your party starts spread out along the **left edge**. The enemies start on **different random squares of the right side** (the right edge on 3×3, the two right-most columns on larger maps).
+
+Units may share a square, but **at most 4 units (any mix of sides) fit in one square** (`CAP` in the script). There is no friendly fire.
+
+- **Blocked moves.** Moves resolve together. If more units try to enter a square than it has room for, the ones already there stay, and the arrivals get in in a random order; the late ones are blocked and stay in the square they came from ("can't enter — it's full"). While planning, the move buttons show "full" on squares that are expected to be full at that step.
+- **Knock-back** also avoids full squares; if no neighbouring square has room, the unit isn't pushed.
+- Icons shrink as a square gets more crowded (2 side by side, 3–4 in a 2×2 grid).
 
 ### 3.2 Actions
 
 | Action | AP | Effect |
 |---|---|---|
-| **Move** | 1 | One square in any direction, diagonals included. |
+| **Move** | 1 per square | Any reachable square in one go, as far as your remaining AP allows (diagonals count as 1 square); hover shows the path and cost, like ranged. |
 | **Melee** | 1 | Hits an opponent in **your own square**. |
 | **Ranged** | 1 + distance (min 2) | Aimed at a **square**; hits whoever stands there when it fires. Can never target your own square. |
 | **Guard** | 1 | Blocks **one** hit landing on the same step it is played. Lasts only that step. |
@@ -84,7 +96,20 @@ The landing choice lives in one function (`pushDest`) so smarter AI logic can re
 
 ### 3.5 Melee clash
 
-If you melee on the same step as an enemy who also melees in your square, the two strikes **clash** instead of dealing damage. A clash takes priority over target choice. Ranged attacks never clash.
+On a square where player melees and enemy melees fire on the same step, the strikes **clash** instead of dealing damage. A clash takes priority over target choice. Ranged attacks never clash.
+
+**The bigger side is split evenly over the smaller side, and each share is its own clash.**
+
+| Melee on the square | Clashes |
+|---|---|
+| 1 vs 1 | one 1-vs-1 |
+| 2 vs 2 | two 1-vs-1 |
+| 1 vs 3 | one 1-vs-3 (the lone character is outnumbered — hard) |
+| 2 vs 3 | a 1-vs-1 and a 1-vs-2 |
+| 2 vs 1, 3 vs 1 | **one** clash: the allies attack the enemy together |
+| 3 vs 2 | a 2-vs-1 and a 1-vs-1 |
+
+The extra unit when it doesn't divide evenly goes to a random share. Every melee on the square belongs to some clash, so none are left to strike on their own. This rewards standing together and helping allies, and punishes a lone character who gets surrounded.
 
 During a clash the battle pauses and a **click minigame** runs:
 
@@ -92,10 +117,14 @@ During a clash the battle pauses and a **click minigame** runs:
 - A row of prompts appears. Each prompt is a ⚔️ (**left click**) or a 🛡️ (**right click**), with a mouse icon showing which button.
 - You click the matching button for each prompt in order.
 - **Two wrong clicks total = you lose the clash** (`CLASH_MAX_FAILS = 2`). Finishing the row with fewer than two misses = you win.
-- **Win:** you hit every clashing enemy for normal damage and knock them back.
-- **Lose:** every clashing enemy hits you for normal damage and you are knocked back once.
+- **Win:** every ally's strike lands, so each enemy in that clash takes **one hit per ally** (3 allies = 3 hits = 6 damage) and is knocked back.
+- **Lose:** each enemy in that clash hits one of the clashing player characters (chosen at random). The other allies are not hurt.
+- **After any clash, everyone standing on that square is thrown clear** to an adjacent square, hit or not. Allies and enemies always land on **different** squares; each side tends to land together (`CLASH_SHARE_PCT`, 60% per unit) but not always. If no clean square has room, any adjacent square with room is used.
+- Clashes in the same step play one after the other (the panel names who is clashing with whom). The human always does the clicking.
 
-**Row length.** Every enemy has a clash range `{min, max}` (default 3–6) in the `UNITS` table. Each clashing enemy rolls its own number of prompts and the row is the **sum**, so two clashing enemies make one longer row while the miss limit stays at two. Bosses or special enemies can use bigger ranges (e.g. 6–10).
+**Row length.** Every enemy has a clash range `{min, max}` (default 3–6) in the `UNITS` table. The row is the **sum** of the rolls of the enemies in that clash. The miss limit stays at two. Bosses or special enemies can use bigger ranges (e.g. 6–10).
+
+Allies do not shorten the row; their advantage is the payoff (more hits on a win, only one ally hurt on a loss). Tune with the miss limit; a future timer will add pressure on top.
 
 Input is ignored for the first half second so the player can get ready. There is currently **no timer**. **(planned — see §7)**
 
@@ -116,19 +145,23 @@ For each enemy the AI samples a few hundred **candidate plans** and scores each 
 - **Candidate generators:** random plan, chase plan, snipe plan (shoot from here), kite plan (back away, then shoot), approach plan (close in just enough to get you into shooting reach), and coverage plans that deliberately cover each square.
 - **Guessed player plans:** random, charging at the enemy, holding position, a player who reads the enemy plan (`smartPlan`), and a player who **steps away** each step (`evadePlan`).
 - **Look-ahead for clashes** treats a clash as a coin flip.
+- **Several player characters:** each candidate plan is simulated against guessed plans for *every* player character. Enemies aim at the nearest character most of the time, sometimes at another one. A kill bonus applies per player character downed, and a bigger one for finishing off the whole party. In bigger fights the AI uses fewer samples per enemy so planning stays fast (under about 0.3 s total at 5×5).
 
 ### 4.2 Styles
 
 | Style | Enemy | Behaviour |
 |---|---|---|
-| **Melee Chaser** | A 👾 | Prefers melee and chasing you onto your square. May shoot, but favours close range. |
-| **Ranged Sniper** | B 👹 | Keeps its distance and shoots. When you close in, it prefers to run away, otherwise guards or melees. Closes in if you are out of its shooting reach. Never wants to end a round out of reach. |
+| **Melee Chaser** | 👾 | Chases its chosen target. Actions: move, melee, guard only (no ranged). |
+| **Ranged Sniper** | 👹 | Keeps its distance and shoots. When you close in, it prefers to run away, otherwise guards or melees. Closes in if you are out of its shooting reach. Never wants to end a round out of reach. |
+| **Hybrid Fighter** | 🧟 | Does everything (move/melee/ranged/guard) but prefers melee. Flexible: melee, or back off and shoot, or guard; makes distance when hurt and cornered. |
 
-Rules shared by both:
+Rules shared by all styles:
 
 - **Lethal priority:** a plan that could finish you off gets a large bonus that beats any style preference. This prevents the player from winning by cornering enemies.
 - **Repeated melee penalty:** each melee beyond the first at the same square costs score, so enemies don't swing several times at a square you will have left. (This was a recurring complaint at higher AP.)
 - **Sniper can't shoot your square**, so it avoids ending on it.
+- **Long moves:** the plan generators pick any square within the unit's remaining AP (cost = squares travelled), usually the one closest to the target half the time, so enemies close in with one action like a player can.
+- **Guard charge in the AI:** each simulated run where a guard really blocks earns a score bonus (Chaser 0.5, Hybrid 0.6, Sniper 0.9), and 60 guard variants of the best-looking plans are tested so guards are chosen on purpose. A sniper with a player in its face prefers to move away first, then chooses guard or melee. Extra guards in one plan are penalised slightly (the charge caps at +1).
 
 Known weaknesses: enemies never plan around clash outcomes beyond a coin flip, and push destinations are random, not tactical.
 
@@ -138,9 +171,9 @@ Known weaknesses: enemies never plan around clash outcomes beyond a coin flip, a
 
 The game is **visual first**: there are no plan-list text panels and no per-step action text. Everything you need is on the board.
 
-- **Layout:** the board is the biggest square that fits the screen; animation and text sizes scale with it. The **action buttons sit in a bar at the bottom** (Move, Melee, Ranged, Guard, Undo, Clear, **Fight!**) with the AP pips above them.
-- **Unit cards** along the top show each unit's HP; enemy style labels and descriptions.
-- **Board:** units are tokens. **Numbered action badges** on squares show the plans — yours and the enemies' (colour-coded per enemy). Hover a ranged target to see the track and distance; valid squares show their AP cost.
+- **Layout:** three columns. **Your party on the left**, the **board in the middle** (the biggest square that fits; animation and text sizes scale with it) and the **enemies on the right**. The **action buttons sit in a bar at the bottom** (Move, Melee, Ranged, Guard, Undo, Clear, **Fight!**).
+- **Unit cards** group each unit's **HP and AP together**: name, HP bar, HP number and AP dots. Filled dots are AP still unplanned; an enemy's dots show what its revealed plan spends. Click a card in your column (or the character on the map) to choose who you are ordering; the selected card is highlighted. On narrow screens the columns move above and below the board.
+- **Board:** units are tokens (smaller when a square is crowded). **Numbered action badges** on squares show the plans — yours and the enemies' (colour-coded per enemy). Hover a ranged target to see the track and distance; valid squares show their AP cost.
 - **Below the first screen:** a collapsible **Battle log** and the **Rules** section.
 - **Tuning** (collapsed at the top): AP, Your HP, Enemy HP, Damage, with Apply/Reset. Settings travel in the page address (e.g. `?ap=4&hp=8`). Permanent defaults live in the `VERSIONS` table in the script.
 
@@ -161,7 +194,7 @@ The game is **visual first**: there are no plan-list text panels and no per-step
 - Everyone has **8 HP** at 2 damage per hit (four hits to defeat anyone). You still face two enemies, so you are outnumbered; enemy count and HP are the main knobs.
 - **AP follows the map size:** 3×3 → 3 AP, 4×4 → 4 AP, 5×5 → 5 AP.
 - Ranged reach is `AP − 1` squares (cost is 1 + distance), so reach grows with the map and a ranged shot can cover most of the board.
-- Losing a **double clash** costs 4 of your 8 HP; winning it costs each enemy 2 of their 8. It is a big gamble for the player. Tune with HP, damage and prompt ranges.
+- Losing a **double clash** costs 4 HP in total (two hits, taken by whichever of your clashing characters the enemies pick); winning it costs each enemy 2 of their 8. It is a big gamble for the player. Tune with HP, damage and prompt ranges.
 - Higher AP lengthens plans and made repeated enemy melee more common until the repeat penalty was added.
 
 ---
@@ -192,10 +225,12 @@ Things that will need work for larger scale:
 - The 4×4 version is still in the code but closed; 5×5 would be added the same way. Board sizes above 5 are not supported (square labels run A–E).
 
 ### Multiple player characters
+Implemented first pass: party chips under the board (or click a character on the map) select who you are ordering; the plan moves on to the next character when one runs out of AP; each character has its own numbered, colour-coded badges. Enemies pick targets among the whole party.
+
 Open questions:
-- How the player selects which character they are ordering, and how a 9-action plan stays readable.
-- **Which character's clicks** a clash uses, and whether simultaneous clashes play one after another.
-- How enemies choose which player character to target.
+- How a 9-action plan (3 characters × 3+ AP) stays readable on a crowded board.
+- **Crowd cap (currently 4 per square).** It keeps squares readable, limits a lone character to at most 3 enemies in one clash, and makes occupying a square a way to block movement. The costs are blocked moves (a "failed" move can feel unfair), random tie-breaks when units race for the last spot, and it only matters at larger scales (on 3×3 with 3 units it never triggers). Without a cap, up to 8 units could stack on one square and the enemies could dogpile a single character. Open: should the cap scale with the map, or be per side (e.g. max 3 each)?
+- Smarter enemy targeting (focus-fire the weakest character, protect their own, split up).
 
 ### Special enemies
 - **Bosses** with bigger clash ranges (6–10).
@@ -215,7 +250,7 @@ Open questions:
 ## 9. Open design questions
 
 1. **Guard strength.** Should guard block all hits in its step instead of one? Currently two simultaneous hits mean one still lands.
-2. **Clash fairness.** Win-all / lose-all for multi-enemy clashes is strong; the alternatives were partial results (win knocks back only one) or fewer allowed misses per extra enemy.
+2. **Clash fairness.** Each player character now clashes separately with an equal share of the enemies. Open: should allies standing in the same square give any extra help (fewer prompts, a higher miss limit) beyond splitting the enemies?
 3. **Ranged versus melee balance.** Ranged can't hit your own square, which makes melee the counter to a sniper in your face; does that hold at 4 AP and on larger boards?
 4. **Difficulty curve** across party sizes and board tiers.
 
