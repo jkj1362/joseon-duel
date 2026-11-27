@@ -1,5 +1,7 @@
 # Joseon Duel — Design Document
 
+한국어 버전: [DESIGN.ko.md](DESIGN.ko.md)
+
 Status: working prototype (single-file browser game, `index.html`). This document records what is implemented today, why the rules are the way they are, and what is planned. Items marked **(planned)** or **(open)** are not in the game yet.
 
 ---
@@ -22,7 +24,7 @@ A small, readable, turn-based tactics duel played on a tiny grid. Each round the
 
 ## 2. Core loop
 
-1. **Plan phase.** The enemies' plans are shown (action list + badges on the board). You spend your action points (AP) on an ordered plan.
+1. **Plan phase.** The enemies' plans are shown on the board (ghost tokens, firing lines, badges; see §5). You spend your action points (AP) on an ordered plan.
 2. **Battle phase.** The plans resolve step by step. Each step: guards, then moves, then attacks, then damage, then knock-back.
 3. **Next round** until all enemies are defeated (win) or you reach 0 HP (lose). A simultaneous double knock-out is a draw.
 
@@ -55,7 +57,7 @@ Units may share a square, but **at most 4 units (any mix of sides) fit in one sq
 
 - **Blocked moves.** Moves resolve together. If more units try to enter a square than it has room for, the ones already there stay, and the arrivals get in in a random order; the late ones are blocked and stay in the square they came from ("can't enter — it's full"). While planning, the move buttons show "full" on squares that are expected to be full at that step.
 - **Knock-back** also avoids full squares; if no neighbouring square has room, the unit isn't pushed.
-- Icons shrink as a square gets more crowded (2 side by side, 3–4 in a 2×2 grid).
+- Icons are a fixed, small size: a square has a lane of up to 4 real tokens (2×2) and a lane of up to 4 ghosts (§5).
 
 ### 3.2 Actions
 
@@ -123,7 +125,7 @@ During a clash the battle pauses and a **click minigame** runs:
 - **Two wrong clicks total = you lose the clash** (`CLASH_MAX_FAILS = 2`). Finishing the row with fewer than two misses = you win.
 - **Win:** every ally's strike lands, so each enemy in that clash takes **one hit per ally** (3 allies = 3 hits = 6 damage) and is knocked back.
 - **Lose:** each enemy in that clash hits one of the clashing player characters (chosen at random). The other allies are not hurt.
-- **After any clash, everyone standing on that square is thrown clear** to an adjacent square, hit or not. Allies and enemies always land on **different** squares; each side tends to land together (`CLASH_SHARE_PCT`, 60% per unit) but not always. If no clean square has room, any adjacent square with room is used.
+- **After a clash, only the losing side is thrown clear** to adjacent squares (all of them, hit or not); the winners keep the square. Allies and enemies that both lost (separate clashes on one square) land on **different** squares; each side tends to land together (`CLASH_SHARE_PCT`, 60% per unit) but not always. If no clean square has room, any adjacent square with room is used.
 - Clashes in the same step play one after the other (the panel names who is clashing with whom). The human always does the clicking.
 
 **Row length.** Every enemy has a clash range `{min, max}` (default 3–6) in the `UNITS` table. The row is the **sum** of the rolls of the enemies in that clash. The miss limit stays at two. Bosses or special enemies can use bigger ranges (e.g. 6–10).
@@ -177,7 +179,12 @@ The game is **visual first**: there are no plan-list text panels and no per-step
 
 - **Layout:** three columns. **Your party on the left**, the **board in the middle** (the biggest square that fits; animation and text sizes scale with it) and the **enemies on the right**. The **action buttons sit in a bar at the bottom** (Move, Melee, Ranged, Guard, Undo, Clear, **Fight!**).
 - **Unit cards** group each unit's **HP and AP together**: name, HP bar, HP number and AP dots. Filled dots are AP still unplanned; an enemy's dots show what its revealed plan spends. Click a card in your column (or the character on the map) to choose who you are ordering; the selected card is highlighted. On narrow screens the columns move above and below the board.
-- **Board:** units are tokens (smaller when a square is crowded). **Numbered action badges** on squares show the plans — yours and the enemies' (colour-coded per enemy). Hover a ranged target to see the track and distance; valid squares show their AP cost.
+- **Board:** each square has two lanes of up to 4 fixed-size icons (2×2): **real tokens** on the left and **ghost tokens** on the right (at most 4 + 4 = 8 icons per square, because the cap of 4 holds both now and at the end of the round). Plans are drawn like this:
+  - **Move → ghost token** where the unit will end up, a faded copy of its icon with a dashed ring and a **number = the step it arrives**. No path is drawn. Only the **final destination** is shown all the time; **earlier stops** (fainter, numbered) appear for focused units.
+  - **Ranged → a thin, translucent line** from the firing square to the landing square, in the shooter's colour, with the **step number near the landing end** and a ring on the target square. Landing squares get a faint red tint. A line **brightens** when its shooter, the line itself or its landing square is focused or hovered. Lines never block clicks.
+  - **Melee and guard → numbered badges** (⚔️ / 🛡️) on the square where the unit plays them.
+  - **Focus:** hovering a character (token, ghost or card) shows its full route while hovered. **Clicking** a character pins it until you click it again or click a different character; a clicked player character is also the one you are ordering. The character you are ordering is always focused. The **👁 All steps** button (or the **Shift** key, a toggle) shows every intermediate ghost of every unit.
+  - Hover a ranged target while planning to see the yellow track.
 - **Below the first screen:** a collapsible **Battle log** and the **Rules** section.
 - **Tuning** (collapsed at the top): AP, Your HP, Enemy HP, Damage, with Apply/Reset. Settings travel in the page address (e.g. `?ap=4&hp=8`). Permanent defaults live in the `VERSIONS` table in the script.
 
@@ -195,7 +202,7 @@ The game is **visual first**: there are no plan-list text panels and no per-step
 
 ## 6. Balance notes
 
-- Everyone has **8 HP** at 2 damage per hit (four hits to defeat anyone). You still face two enemies, so you are outnumbered; enemy count and HP are the main knobs.
+- Everyone has **8 HP** at 2 damage per hit (four hits to defeat anyone). You are usually outnumbered (1 vs 2, 2 vs 3, 3 vs 4–5); enemy count and HP are the main knobs.
 - **AP follows the map size:** 3×3 → 3 AP, 4×4 → 4 AP, 5×5 → 5 AP.
 - Ranged reach is `AP − 1` squares (cost is 1 + distance), so reach grows with the map and a ranged shot can cover most of the board.
 - Losing a **double clash** costs 4 HP in total (two hits, taken by whichever of your clashing characters the enemies pick); winning it costs each enemy 2 of their 8. It is a big gamble for the player. Tune with HP, damage and prompt ranges.
@@ -206,13 +213,7 @@ The game is **visual first**: there are no plan-list text panels and no per-step
 ## 7. Roadmap
 
 ### Near term
-- **Plan readability on the map (design choice pending).** The numbered badges on destination squares are hard to read, for enemies and for the player's own plans: no start square or path, badges pile up when units share squares, and the step order doesn't read as a flow. Options (pick later; they combine):
-  1. **Path arrows:** an SVG overlay with an arrow from each unit's start to its destination in the unit's colour, step number on the arrow; ranged = dashed line to the target square; melee/guard = an icon on the unit's own square.
-  2. **Ghost tokens:** a faded copy of the unit's icon at its planned destination.
-  3. **Focus mode:** hover or click a unit or its card to highlight only that unit's plan and dim the rest; the default view stays light.
-  4. **Step scrubber:** a 1–N control showing where everyone stands after each step, to step through the round before committing.
-  5. **Plan strip on each card:** a row such as 👣 → 👣 → ⚔️ in step order, linked to the map on hover.
-  Current recommendation: build 1 + 2 + 3 together (1 and 2 show the movement, 3 stops nine units on 5×5 from turning into noise), then add 4 if that isn't enough.
+- **Plan readability (built; user feedback: better, but needs more improvement).** Ghost tokens for moves, thin lines for ranged shots, focus/pin/toggle for the full route (§5). Still on the shelf: a **step scrubber** (a 1–N control showing where everyone stands after each step) and a **plan strip on each card**. Add them only if this isn't enough on 5×5.
 - **Clash pressure (planned):** a timer / click window so that not pressing in time counts as one failure.
 - **Smarter push destinations** (and AI that plans around knock-back and clash outcomes).
 - **Optional melee range (planned):** currently melee hits only your own square. Making melee reach adjacent squares would change clash, target choice and the AI, so it needs its own design pass.
@@ -233,10 +234,10 @@ Things that will need work for larger scale:
 - Enemy AI cost grows with units and squares; planning needs a lighter version.
 - Readability of many tokens and badges per square.
 - Ranged reach versus board size (raise AP or change the distance cost).
-- The 4×4 version is still in the code but closed; 5×5 would be added the same way. Board sizes above 5 are not supported (square labels run A–E).
+- 4×4 and 5×5 are implemented (switch in the Tuning menu). Board sizes above 5 are not supported (square labels run A–E).
 
 ### Multiple player characters
-Implemented first pass: party chips under the board (or click a character on the map) select who you are ordering; the plan moves on to the next character when one runs out of AP; each character has its own numbered, colour-coded badges. Enemies pick targets among the whole party.
+Implemented first pass: click a unit card (or a character on the map) to select who you are ordering; the plan moves on to the next character when one runs out of AP; each character has its own colour. Enemies pick targets among the whole party.
 
 Open questions:
 - How a 9-action plan (3 characters × 3+ AP) stays readable on a crowded board.
@@ -278,4 +279,6 @@ Open questions:
 | Melee clash depends on chosen target | Tried, **reverted** — clash takes priority over target choice. |
 | Allies shorten the clash row (-1 prompt per extra ally) | Tried, **removed** — unintuitive and needs extra explanation. Allies keep the bigger win payoff only. |
 | Loss in a 3-vs-1 / 2-vs-1 clash hits every ally | Considered, **not chosen for now** — a lost clash hurts one random ally (rule A); to be re-tested if grouping up proves too strong. |
-| 4×4 board | Built and then **closed** for now; board scaling is planned per encounter (§7). |
+| Plan overlay with path arrows for every unit, ghost tokens and focus-only highlighting | Tried, **reverted** — far harder to read: all paths at once crossed each other and fading non-focused plans hid information needed for timing. Replaced by ghost tokens for moves, thin lines for ranged shots, numbered melee/guard badges and hover/click focus (§5). |
+| Showing an enemy already moved (preview of its end position) instead of ghosts | Discussed, **not chosen** — mid-round positions matter because attacks resolve at their own step. |
+| 4×4 board | Built, briefly closed, then **re-opened** with 2 vs 3 (and 5×5 with 3 vs 4–5). |

@@ -48,7 +48,7 @@
   #board { display:grid; gap:8px; width:100%; height:100%; }
   #fx { position:absolute; inset:0; pointer-events:none; overflow:visible; z-index:5; }
   .cell { position:relative; background:var(--panel); border:2px solid var(--line); border-radius:12px; min-width:0; min-height:0;
-          font-size:calc(var(--cell) * var(--k, .36)); display:flex; flex-wrap:wrap; align-items:center; justify-content:center; align-content:center; gap:2px; color:inherit; padding:0; cursor:default; }
+          font-size:calc(var(--cell) * .22); display:flex; flex-wrap:wrap; align-items:center; justify-content:center; align-content:center; gap:2px; color:inherit; padding:0; cursor:default; }
   .cell.can { border-color:var(--ok); cursor:pointer; background:#1f2a26; }
   .cell.can:hover { background:#27382f; }
   .cell.track { border-color:var(--trk); background:#38321a; }
@@ -59,7 +59,17 @@
   .cell.flash { animation:fl .5s; }
   @keyframes fl { 0%{background:#ff5c6c88} 100%{background:var(--panel)} }
   .tok { position:relative; display:inline-block; line-height:1; }
-  .cell[data-crowd="3"] .tok, .cell[data-crowd="4"] .tok { flex:0 0 42%; text-align:center; }   /* 3–4 units: two per row */
+  /* Two lanes per square: real tokens (left) and ghosts of units that will arrive (right); each holds up to 4 icons in a 2x2 block. */
+  .lane { position:absolute; top:26%; bottom:8%; width:47%; display:flex; flex-wrap:wrap; align-content:center; justify-content:center; gap:3px 2px; }
+  .rlane { left:2%; } .rlane.solo { left:26.5%; } .glane { right:2%; }
+  .lane .tok, .lane .gh { flex:0 0 46%; text-align:center; }
+  .gh { position:relative; line-height:1; opacity:.62; border-radius:50%; outline:2px dashed var(--c); outline-offset:1px; }
+  .gh.mid { opacity:.28; outline-width:1px; }
+  .gh .gn { position:absolute; right:-34%; top:-30%; font-style:normal; font-size:max(10px, .5em); line-height:1; font-weight:800; background:var(--c); color:#10131a; border-radius:8px; padding:1px 4px; }
+  .gm { flex:0 0 100%; text-align:center; font-size:.5em; color:var(--dim); }
+  .cell.tgt { box-shadow:inset 0 0 0 2px rgba(255,92,108,.38); }
+  #plans { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3; overflow:visible; }
+  #showall.on { border-color:var(--ok); color:var(--ok); }
   .tok.sel { outline:3px solid var(--c); outline-offset:2px; border-radius:50%; }
   .tok .shield { position:absolute; right:-22%; bottom:-8%; font-size:.55em; font-style:normal; }
   .badges { position:absolute; right:6px; top:4px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:3px; max-width:calc(var(--cell) * .8); }
@@ -131,7 +141,7 @@
   <div id="arena">
     <div class="col" id="pcol"></div>
     <div id="stage">
-      <div id="boardwrap"><div id="board"></div><div id="fx"></div><div id="clashlayer"></div></div>
+      <div id="boardwrap"><div id="board"></div><svg id="plans"></svg><div id="fx"></div><div id="clashlayer"></div></div>
     </div>
     <div class="col" id="ecol"></div>
   </div>
@@ -143,6 +153,7 @@
       <button class="act" data-a="melee">⚔️ Melee (1)</button>
       <button class="act" data-a="ranged">🏹 Ranged (2+)</button>
       <button class="act" data-a="guard">🛡️ Guard (1)</button>
+      <button class="sm" id="showall" title="Show every step of every unit (toggle with Shift)">👁 All steps (Shift)</button>
       <button class="sm" id="undo">↩ Undo</button>
       <button class="sm" id="clear">✕ Clear</button>
       <button id="fight">Fight!</button>
@@ -157,7 +168,7 @@
   <summary>Rules (as implemented)</summary>
   <ul>
     <li>Your party (<span class="v-np"></span> character<span class="v-nps"></span>, <span class="v-hp"></span> HP each) faces <span class="v-ne"></span> enemies (<span class="v-ehp"></span> HP each). Defeat every enemy to win; you lose when your whole party is down. Pick a character in the bar below the board (or click it on the map) to plan its actions.</li>
-    <li>Each round everyone plans up to <span class="v-ap"></span> AP worth of actions (the bigger the map, the more AP). The enemies plan first; their numbered action badges show on the board.</li>
+    <li>Each round everyone plans up to <span class="v-ap"></span> AP worth of actions (the bigger the map, the more AP). The enemies plan first; their plans show on the board: a numbered ghost token where a unit will end up (earlier stops appear when you hover that unit, for the character you are ordering, or with the 👁 All steps toggle / Shift key), a thin line with a step number for each ranged shot (it brightens when you hover the shooter, the line or the target square), and numbered ⚔️ / 🛡️ badges for melee and guard. Click an enemy card to keep it highlighted.</li>
     <li>The battle runs in steps: every unit's 1st action resolves together, then every 2nd action, and so on. Within a step: guards, then moves, then attacks.</li>
     <li>Move: 1 AP per square, in one go as far as your remaining AP allows (like choosing a ranged target; diagonals count as 1 square). The cost is shown on each reachable square. Guard: 1 AP, blocks one hit landing on the same step it is played (it ends with that step). <b>Guard charge:</b> a guard that really blocks a hit gives that character +1 AP next round only (shown as a gold, blinking dot — use it or lose it). The bonus never exceeds +1, but it is repeatable: guard successfully again (even in a bonus round) to earn it again.</li>
     <li>Melee: 1 AP, hits any opponent in your own square.</li>
@@ -229,6 +240,7 @@ function track(a, b){
 }
 
 let S, myPlans, foePlans, sel, mode, phase, pending = null, round = 1;
+let hoverU = null, pinU = null, hoverCell = null, hoverLine = null, showAll = false, LINES = [];   // plan-overlay focus state
 let PAP = AP, PSHOOT = true;   // PSHOOT = plans may include ranged attacks (off for Melee Chasers). PAP = AP of the unit a plan is being generated for (base AP + its one-round guard bonus)   // phase: ai | plan | battle | over
 
 const projPos = (plan, pos) => { for (const a of plan) if (a.t==='move') pos = a.to; return pos; };
@@ -594,34 +606,100 @@ function aiPlanCore(state, k, chosen){
 
 /* ---------- UI ---------- */
 const $ = id => document.getElementById(id);
-const board = $('board');
+const board = $('board'), $wrap0 = $('boardwrap');
 board.style.gridTemplateColumns = board.style.gridTemplateRows = `repeat(${N}, 1fr)`;
 for (let i=0; i<N*N; i++){
   const b = document.createElement('button'); b.className = 'cell'; b.dataset.i = i;
-  b.addEventListener('click', () => onCell(i));
+  b.addEventListener('click', e => onCell(i, e));
   b.addEventListener('mouseenter', () => paintTrack(i));
   b.addEventListener('mouseleave', () => paintTrack(null));
   board.appendChild(b);
 }
 function buildCards(){
+  hoverU = pinU = hoverCell = hoverLine = null;
   const card = k => `<div class="side${isPlayer(k) ? ' pc' : ''}" id="side_${k}" style="--c:${COL[k]}">`
     + `<h2>${UNITS[k].tok} ${UNITS[k].name}${UNITS[k].style ? `<span class="sty">${STYLE_LABEL[UNITS[k].style]}</span>` : ''}</h2>`
     + `<div class="hp"><i id="hp_${k}"></i></div><div class="res"><span class="meta" id="m_${k}"></span><span class="ap" id="ap_${k}"></span></div></div>`;
   $('pcol').dataset.title = PLAYERS.length > 1 ? 'YOUR PARTY' : 'YOU'; $('ecol').dataset.title = 'ENEMIES';
   $('pcol').innerHTML = PLAYERS.map(card).join(''); $('ecol').innerHTML = ENEMIES.map(card).join('');
-  PLAYERS.forEach(p => $('side_'+p).onclick = () => { if (phase==='plan' && alive(S,p)){ sel = p; mode = null; pending = null; render(); } });   // click a card to order that character
+  ALL.forEach(k => { $('side_'+k).onmouseenter = () => { hoverU = k; drawPlans(); }; $('side_'+k).onmouseleave = () => { hoverU = null; drawPlans(); }; });
+  ENEMIES.forEach(e => $('side_'+e).addEventListener('click', () => { if (phase==='plan'){ pinU = pinU===e ? null : e; drawPlans(); } }));   // click a character to keep its full plan shown; click again to release
+  PLAYERS.forEach(p => $('side_'+p).onclick = () => { if (phase==='plan' && alive(S,p)){ if (sel===p) pinU = pinU===p ? null : p; else { sel = p; pinU = p; } mode = null; pending = null; render(); } });   // click a card to order that character
 }
 
+// Melee and guard badges: numbered, on the square where the unit will be when it plays them. (Moves are ghosts, shots are lines.)
 function planBadges(plan, start, k, out){
   let pos = start;
   plan.forEach((a,i) => {
-    let c = pos;
-    if (a.t==='move'){ c = a.to; pos = a.to; } else if (a.t==='ranged') c = a.at;
-    (out[c] = out[c] || []).push(`<span class="bdg" style="--c:${COL[k]}">${i+1}${ICON[a.t]}</span>`);
+    if (a.t==='move') pos = a.to;
+    else if (a.t==='melee' || a.t==='guard') (out[pos] = out[pos] || []).push(`<span class="bdg" style="--c:${COL[k]}">${i+1}${ICON[a.t]}</span>`);
   });
   return out;
 }
 
+/* ---------- plan overlay: ghosts for moves, thin lines for ranged shots ---------- */
+// A move shows as a ghost token where the unit will stand: always the final destination (numbered with the step it arrives), and the earlier
+// destinations (fainter, numbered) only for focused units or while "All steps" is on. A ranged shot is a thin translucent line from the firing
+// square to the landing square with the step number near the landing end; it brightens when its shooter, the line, or its landing square is focused.
+const focused = k => k===hoverU || k===pinU || (phase==='plan' && k===sel);
+const segDist = (x, y, a, b) => { const dx = b.x-a.x, dy = b.y-a.y, L2 = dx*dx + dy*dy || 1, t = Math.max(0, Math.min(1, ((x-a.x)*dx + (y-a.y)*dy) / L2)); return Math.hypot(x - (a.x+t*dx), y - (a.y+t*dy)); };
+function drawPlans(){
+  const svg = $('plans');
+  if (!svg) return;
+  const planning = phase === 'plan', gh = {}, lines = [], targets = new Set();
+  if (planning) for (const k of ALL){
+    if (!alive(S,k)) continue;
+    const plan = (isPlayer(k) ? myPlans : foePlans)[k];
+    if (!plan || !plan.length) continue;
+    let pos = S[k].pos; const stops = [];
+    plan.forEach((a, j) => {
+      if (a.t==='move'){ pos = a.to; stops.push({ sq:pos, n:j+1 }); }
+      else if (a.t==='ranged'){ lines.push({ k, from:pos, to:a.at, n:j+1, j }); targets.add(a.at); }
+    });
+    stops.forEach((st, idx) => { const fin = idx === stops.length-1; if (fin || showAll || focused(k)) (gh[st.sq] = gh[st.sq] || []).push({ k, n:st.n, fin }); });
+  }
+  const cells = [...board.children];
+  cells.forEach((el, i) => {
+    const rl = el.querySelector('.rlane'), gl = el.querySelector('.glane');
+    if (!rl || !gl) return;
+    const items = (gh[i] || []).sort((a, b) => b.fin - a.fin), shown = items.slice(0, 4), extra = items.length - shown.length;
+    gl.innerHTML = shown.map(g => `<span class="gh${g.fin ? '' : ' mid'}" data-g="${g.k}" style="--c:${COL[g.k]}">${UNITS[g.k].tok}<i class="gn">${g.n}</i></span>`).join('') + (extra > 0 ? `<span class="gm">+${extra}</span>` : '');
+    rl.classList.toggle('solo', !items.length);
+    el.classList.toggle('tgt', targets.has(i));
+  });
+  LINES = [];
+  if (!planning || !cells.length || !lines.length){ svg.innerHTML = ''; return; }
+  const cell = cells[0].offsetWidth, lw = Math.max(1.6, cell * .022), r = Math.max(8, cell * .07);
+  const off = k => { const a = ALL.indexOf(k) * 2.4, m = cell * .1; return { x:Math.cos(a)*m, y:Math.sin(a)*m }; };   // units get slightly different lanes
+  const ctr = (i, k) => { const el = cells[i], o = off(k); return { x:el.offsetLeft + el.offsetWidth/2 + o.x, y:el.offsetTop + el.offsetHeight/2 + o.y }; };
+  LINES = lines.map(l => { const key = l.k + ':' + l.j; return { ...l, key, p1:ctr(l.from, l.k), p2:ctr(l.to, l.k), bright:focused(l.k) || hoverLine===key || hoverCell===l.to }; });
+  const order = [...LINES.filter(l => !l.bright), ...LINES.filter(l => l.bright)];
+  svg.innerHTML = order.map(l => {
+    const col = COL[l.k], b = l.bright, dx = l.p2.x-l.p1.x, dy = l.p2.y-l.p1.y, len = Math.hypot(dx, dy) || 1, ux = dx/len, uy = dy/len;
+    const q = { x:l.p2.x - ux*Math.min(cell*.4, len*.45), y:l.p2.y - uy*Math.min(cell*.4, len*.45) };
+    return `<g${b ? ` style="filter:drop-shadow(0 0 4px ${col})"` : ''}>`
+      + `<line x1="${l.p1.x}" y1="${l.p1.y}" x2="${l.p2.x}" y2="${l.p2.y}" stroke="${col}" stroke-width="${b ? lw*2.2 : lw}" stroke-linecap="round" opacity="${b ? 1 : .32}"/>`
+      + `<circle cx="${l.p2.x}" cy="${l.p2.y}" r="${cell*.055}" fill="none" stroke="${col}" stroke-width="${b ? lw*2 : lw*1.2}" opacity="${b ? 1 : .6}"/>`
+      + `<circle cx="${q.x}" cy="${q.y}" r="${r}" fill="${col}" stroke="#10131a" stroke-width="2" opacity="${b ? 1 : .8}"/>`
+      + `<text x="${q.x}" y="${q.y}" font-size="${r*1.25}" font-weight="800" fill="#10131a" text-anchor="middle" dominant-baseline="central">${l.n}</text></g>`;
+  }).join('');
+}
+const setShowAll = v => { showAll = v; $('showall').classList.toggle('on', v); drawPlans(); };
+$('showall').onclick = () => setShowAll(!showAll);
+window.addEventListener('keydown', e => { if (e.key==='Shift' && !e.repeat && !/INPUT|TEXTAREA/.test(e.target.tagName)) setShowAll(!showAll); });
+board.addEventListener('mouseover', e => {
+  const t = e.target.closest('[data-u],[data-g]'), c = e.target.closest('.cell'), u = t ? (t.dataset.u || t.dataset.g) : null, ci = c ? +c.dataset.i : null;
+  if (u !== hoverU || ci !== hoverCell){ hoverU = u; hoverCell = ci; drawPlans(); }
+});
+board.addEventListener('mouseleave', () => { if (hoverU !== null || hoverCell !== null){ hoverU = null; hoverCell = null; drawPlans(); } });
+$wrap0.addEventListener('mousemove', e => {                                    // hovering near a firing line brightens just that line (lines never block clicks)
+  if (phase !== 'plan' || !LINES.length){ if (hoverLine){ hoverLine = null; drawPlans(); } return; }
+  const r = $wrap0.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  let best = null, bd = 8;
+  for (const l of LINES){ const d = segDist(x, y, l.p1, l.p2); if (d < bd){ bd = d; best = l.key; } }
+  if (best !== hoverLine){ hoverLine = best; drawPlans(); }
+});
+$wrap0.addEventListener('mouseleave', () => { if (hoverLine){ hoverLine = null; drawPlans(); } });
 // Best guess of how many units will be on `cell` once the moves of step `step` are done, from the plans made so far (not counting `except`).
 function occAt(cell, step, except){
   let n = 0;
@@ -667,14 +745,12 @@ function render(flash=[], trail=[]){
     const can = canCell(i);
     el.className = 'cell' + (can ? ' can' : '') + (flash.includes(i) ? ' flash' : '');
     const here = ALL.filter(k => alive(S,k) && S[k].pos===i);
-    el.dataset.crowd = here.length;                                   // the more units on a square, the smaller their icons
-    el.style.setProperty('--k', [.36, .36, .30, .25, .25][here.length] ?? .2);
-    el.innerHTML = `<span class="name">${cname(i)}</span>` +
-      here.map(k =>`<span class="tok${planning && k===sel && PLAYERS.length>1 ? ' sel' : ''}" data-u="${k}" style="--c:${COL[k]}">${UNITS[k].tok}${S[k].g?'<i class="shield">🛡️</i>':''}</span>`).join('') +
-      `<span class="badges">${(badges[i]||[]).join('')}</span>` +
-      (can && (mode==='ranged' || mode==='move') ? `<span class="cost">${can} AP</span>` : '') +
-      (planning && mode==='move' && !can && !pending && sel && i!==ppos && dist(ppos, i) <= left(myPlans[sel], sel) && squareFull(i) ? '<span class="cost" style="color:#ff5c6c">full</span>' : '') +
-      (planning && ppos===i && ppos!==S[sel].pos ? `<span class="cost" style="left:8px;right:auto;bottom:5px;color:${COL[sel]}">ends here</span>` : '');
+    el.innerHTML = `<span class="name">${cname(i)}</span>`
+      + `<div class="lane rlane solo">${here.map(k => `<span class="tok${planning && k===sel && PLAYERS.length>1 ? ' sel' : ''}" data-u="${k}" style="--c:${COL[k]}">${UNITS[k].tok}${S[k].g?'<i class="shield">🛡️</i>':''}</span>`).join('')}</div>`
+      + `<div class="lane glane"></div>`
+      + `<span class="badges">${(badges[i]||[]).join('')}</span>`
+      + (can && (mode==='ranged' || mode==='move') ? `<span class="cost">${can} AP</span>` : '')
+      + (planning && mode==='move' && !can && !pending && sel && i!==ppos && dist(ppos, i) <= left(myPlans[sel], sel) && squareFull(i) ? '<span class="cost" style="color:#ff5c6c">full</span>' : '');
   });
   setTrack(trail);
   // AP dots: base AP in the unit's colour, plus one gold dot when it holds a guard-charge bonus (blinks until used: it is gone after this round).
@@ -702,6 +778,7 @@ function render(flash=[], trail=[]){
   const none = !planning || !sel || !myPlans[sel].length;
   $('undo').disabled = none; $('clear').disabled = none;
   $('fight').disabled = !planning || !!pending;
+  drawPlans();
 }
 
 function say(t){ $('msg').textContent = t; }
@@ -726,10 +803,13 @@ function afterAction(){
   const next = PLAYERS.filter(p => alive(S,p) && left(myPlans[p], p) > 0);
   if (next.length){ const at = PLAYERS.indexOf(sel); sel = next.find(p => PLAYERS.indexOf(p) > at) || next[0]; }
 }
-function onCell(i){
-  if (phase==='plan' && !mode && !pending){          // click a character to select it (click again to cycle through a shared square)
+function onCell(i, ev){
+  if (phase==='plan' && !mode && !pending){          // click a character (token or ghost) to pin its full plan; a player token also selects it; click again to release
+    const tk = ev && ev.target.closest ? ev.target.closest('[data-u],[data-g]') : null, who = tk ? (tk.dataset.u || tk.dataset.g) : null;
+    if (who && isEnemy(who)){ pinU = pinU===who ? null : who; drawPlans(); return; }
+    if (who && isPlayer(who) && alive(S,who)){ if (sel===who) pinU = pinU===who ? null : who; else { sel = who; pinU = who; } render(); return; }
     const here = PLAYERS.filter(p => alive(S,p) && S[p].pos===i);
-    if (here.length){ sel = here[(here.indexOf(sel) + 1) % here.length]; render(); return; }
+    if (here.length){ sel = here[(here.indexOf(sel) + 1) % here.length]; pinU = sel; render(); return; }
   }
   const c = canCell(i); if (!c) return;
   if (mode==='move') myPlans[sel].push(mk('move',{to:i, cost:c}));
@@ -754,6 +834,7 @@ function layout(){
   const w = $wrap.clientWidth, cell = (w - (N-1)*8) / N;
   U = cell / 110;
   $wrap.style.setProperty('--cell', cell + 'px'); $wrap.style.setProperty('--u', U);
+  drawPlans();
 }
 new ResizeObserver(layout).observe($wrap); layout();
 function center(i){
