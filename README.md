@@ -2,7 +2,7 @@
 
 A small turn-based tactics game for the browser. Open `index.html` — no build step.
 
-You (6 HP) fight two enemies (10 HP each) on a 3×3 grid. Each round everyone plans 3 AP of actions; the enemies plan first and **show their whole plan**, then all actions resolve step by step.
+You (8 HP) fight two enemies (8 HP each) on a 3×3 grid. Each round everyone plans 3 AP of actions (bigger maps give more AP); the enemies plan first and **show their whole plan**, then all actions resolve step by step.
 
 | Action | Cost | Effect |
 |---|---|---|

@@ -8,142 +8,154 @@
   :root { --bg:#14161c; --panel:#1d212b; --line:#2e3442; --txt:#e8eaf0; --dim:#8b93a7;
           --you:#4aa3ff; --fa:#ff5c6c; --fb:#ffa24a; --ok:#4ade80; --trk:#ffd84a; }
   * { box-sizing:border-box; }
-  body { margin:0; min-height:100vh; background:var(--bg); color:var(--txt); font-family:system-ui,sans-serif;
-         display:flex; flex-direction:column; align-items:center; padding:16px; gap:12px; }
-  h1 { margin:0; font-size:22px; }
-  #vbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13px; color:var(--dim); }
+  html, body { margin:0; background:var(--bg); color:var(--txt); font-family:system-ui,sans-serif; }
+  /* The game fills the first screen: header, units, big board, action bar at the bottom. Rules/log sit below the fold. */
+  #app { height:100vh; height:100dvh; display:flex; flex-direction:column; gap:8px; padding:10px 14px; max-width:1200px; margin:0 auto; }
+  #head { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  h1 { margin:0; font-size:18px; }
+  #tuning { font-size:13px; color:var(--dim); } #tuning summary { cursor:pointer; }
+  #vbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13px; color:var(--dim); margin-top:6px; }
   #vbar a { padding:4px 12px; border:1px solid var(--line); border-radius:8px; color:var(--txt); text-decoration:none; background:var(--panel); }
   #vbar a.on { border-color:var(--ok); color:var(--ok); font-weight:700; }
   #vbar input { width:46px; background:var(--panel); color:var(--txt); border:1px solid var(--line); border-radius:6px; padding:3px 4px; }
   #vbar button { padding:3px 10px; }
-  #top { display:flex; gap:10px; width:100%; max-width:760px; }
-  .side { flex:1; background:var(--panel); border-radius:10px; padding:10px 12px; }
-  .side h2 { margin:0 0 6px; font-size:14px; }
+  #top { display:flex; gap:8px; }
+  .side { flex:1; background:var(--panel); border-radius:10px; padding:6px 10px; }
+  .side h2 { margin:0 0 4px; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .side.p h2 { color:var(--you); } .side.a h2 { color:var(--fa); } .side.b h2 { color:var(--fb); }
-  .hp { height:10px; background:#0006; border-radius:5px; overflow:hidden; }
+  .hp { height:8px; background:#0006; border-radius:5px; overflow:hidden; }
   .hp i { display:block; height:100%; transition:width .4s; }
   .side.p .hp i { background:var(--you); } .side.a .hp i { background:var(--fa); } .side.b .hp i { background:var(--fb); }
   .side.dead { opacity:.4; }
-  .meta { font-size:12px; color:var(--dim); margin-top:4px; }
-  #main { display:flex; gap:16px; width:100%; max-width:760px; flex-wrap:wrap; justify-content:center; }
-  #boardwrap { position:relative; } #fx { position:absolute; inset:0; pointer-events:none; overflow:visible; z-index:5; }
-  .fx-swing { position:absolute; width:0; height:0; }
-  .fx-swing svg { position:absolute; left:-11px; top:-58px; filter:drop-shadow(0 0 5px var(--c)); overflow:visible; }
-  .fx-swing .arc { position:absolute; left:-34px; top:-34px; width:68px; height:68px; border-radius:50%; border:5px solid transparent;
-                   border-top-color:var(--c); opacity:.7; filter:blur(.6px); }
-  .fx-bow { position:absolute; width:0; height:0; }
-  .fx-bow svg { position:absolute; left:-20px; top:-20px; overflow:visible; filter:drop-shadow(0 0 4px var(--c)); }
-  .fx-arrow { position:absolute; left:-16px; top:-2px; width:32px; height:4px; background:var(--c); border-radius:2px; opacity:0; box-shadow:0 0 6px var(--c); }
-  .fx-arrow::after { content:''; position:absolute; right:-7px; top:-5px; border-left:10px solid var(--c); border-top:7px solid transparent; border-bottom:7px solid transparent; }
-  .fx-clashswords { position:absolute; width:0; height:0; }
-  .fx-clashswords .cs { position:absolute; left:0; top:0; filter:drop-shadow(0 0 7px var(--c)); }
-  #clash { margin-top:8px; padding:10px; border:2px solid var(--trk); border-radius:12px; background:#2a2614; text-align:center; user-select:none; cursor:pointer; }
-  #clash[hidden] { display:none; }
-  #clash .ct { font-weight:700; color:var(--trk); font-size:14px; }
-  #clash .cs2 { font-size:12px; color:var(--dim); margin:2px 0 8px; }
-  #clash .crow { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
-  #clash .ci { width:48px; padding:5px 0; border:2px solid var(--line); border-radius:8px; background:var(--panel); display:flex; flex-direction:column; align-items:center; gap:3px; }
-  #clash .ci .ic { font-size:24px; line-height:1; }
-  #clash .ci.cur { border-color:var(--trk); transform:translateY(-3px); }
-  #clash .ci.ok { border-color:var(--ok); background:#1f3a2a; }
-  #clash .ci.bad { border-color:#ff5c6c; background:#4a2229; }
-  #clash .miss { margin-top:8px; font-size:13px; }
-  .fx-spark { position:absolute; font-size:40px; transform:translate(-50%,-50%); animation:spark .6s ease-out forwards; }
-  @keyframes spark { 0%{transform:translate(-50%,-50%) scale(.2);opacity:0} 30%{transform:translate(-50%,-50%) scale(1.3);opacity:1} 100%{transform:translate(-50%,-50%) scale(1);opacity:0} }
-  #board { display:grid;  gap:6px; }
-  .cell { position:relative; background:var(--panel); border:2px solid var(--line); border-radius:10px;
-          font-size:28px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; align-content:center; gap:2px; color:inherit; padding:0; cursor:default; }
+  .meta { font-size:11px; color:var(--dim); margin-top:3px; }
+  #msg { font-weight:700; min-height:20px; text-align:center; font-size:15px; }
+  /* Stage: the board is the biggest square that fits between the header and the action bar. */
+  #stage { flex:1; min-height:0; container-type:size; display:flex; align-items:center; justify-content:center; }
+  #boardwrap { position:relative; width:min(100cqw, 100cqh); height:min(100cqw, 100cqh); --cell:110px; --u:1; }
+  #board { display:grid; gap:8px; width:100%; height:100%; }
+  #fx { position:absolute; inset:0; pointer-events:none; overflow:visible; z-index:5; }
+  .cell { position:relative; background:var(--panel); border:2px solid var(--line); border-radius:12px; min-width:0; min-height:0;
+          font-size:calc(var(--cell) * .36); display:flex; flex-wrap:wrap; align-items:center; justify-content:center; align-content:center; gap:2px; color:inherit; padding:0; cursor:default; }
   .cell.can { border-color:var(--ok); cursor:pointer; background:#1f2a26; }
   .cell.can:hover { background:#27382f; }
   .cell.track { border-color:var(--trk); background:#38321a; }
-  .cell.track::after { content:attr(data-n); position:absolute; left:50%; bottom:4px; transform:translateX(-50%);
-                       font-size:12px; font-weight:700; color:var(--trk); }
-  .cell .name { position:absolute; left:6px; top:3px; font-size:11px; color:var(--dim); }
-  .cell .cost { position:absolute; right:6px; bottom:3px; font-size:13px; color:var(--ok); font-weight:700; }
+  .cell.track::after { content:attr(data-n); position:absolute; left:50%; bottom:5px; transform:translateX(-50%);
+                       font-size:max(12px, calc(var(--cell) * .1)); font-weight:700; color:var(--trk); }
+  .cell .name { position:absolute; left:8px; top:5px; font-size:max(11px, calc(var(--cell) * .09)); color:var(--dim); }
+  .cell .cost { position:absolute; right:8px; bottom:5px; font-size:max(13px, calc(var(--cell) * .11)); color:var(--ok); font-weight:700; }
   .cell.flash { animation:fl .5s; }
   @keyframes fl { 0%{background:#ff5c6c88} 100%{background:var(--panel)} }
-  .badges { position:absolute; right:4px; top:2px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:2px; max-width:84px; }
-  .badges .bdg { font-size:11px; padding:1px 4px; border-radius:6px; font-weight:700; color:#10131a; }
+  .tok { position:relative; display:inline-block; line-height:1; }
+  .tok .shield { position:absolute; right:-22%; bottom:-8%; font-size:.55em; font-style:normal; }
+  .badges { position:absolute; right:6px; top:4px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:3px; max-width:calc(var(--cell) * .8); }
+  .badges .bdg { font-size:max(11px, calc(var(--cell) * .095)); padding:1px 5px; border-radius:7px; font-weight:700; color:#10131a; }
   .badges .bdg.p { background:var(--you); } .badges .bdg.a { background:var(--fa); } .badges .bdg.b { background:var(--fb); }
-  .panel { flex:1; min-width:250px; max-width:330px; display:flex; flex-direction:column; gap:10px; }
-  .box { background:var(--panel); border-radius:10px; padding:10px 12px; }
-  .box h3 { margin:0 0 6px; font-size:13px; color:var(--dim); font-weight:600; }
-  .plan { margin:0 0 4px; padding:0; list-style:none; font-size:13px; line-height:1.55; }
-  .plan li b { display:inline-block; min-width:20px; color:var(--dim); font-weight:600; }
-  .plan:empty::after { content:"(nothing yet)"; color:var(--dim); }
-  .who { font-size:12px; font-weight:700; margin-top:4px; } .who.a { color:var(--fa); } .who.b { color:var(--fb); }
-  #pick { margin-top:8px; font-size:13px; } #pick .btns { margin-top:6px; }
-  .pips { font-size:18px; letter-spacing:3px; }
-  .btns { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-  button.act, button.sm { background:#2a3040; color:var(--txt); border:2px solid transparent; border-radius:8px; padding:8px; font-size:14px; cursor:pointer; }
+  /* Attack animations scale with the board (--u = cell size / 110px). */
+  .fx-swing { position:absolute; width:0; height:0; }
+  .fx-swing svg { position:absolute; width:calc(22px * var(--u)); height:calc(36px * var(--u)); left:calc(-11px * var(--u)); top:calc(-58px * var(--u)); filter:drop-shadow(0 0 5px var(--c)); overflow:visible; }
+  .fx-swing .arc { position:absolute; left:calc(-34px * var(--u)); top:calc(-34px * var(--u)); width:calc(68px * var(--u)); height:calc(68px * var(--u)); border-radius:50%;
+                   border:calc(5px * var(--u)) solid transparent; border-top-color:var(--c); opacity:.7; filter:blur(.6px); }
+  .fx-bow { position:absolute; width:0; height:0; }
+  .fx-bow svg { position:absolute; width:calc(40px * var(--u)); height:calc(40px * var(--u)); left:calc(-20px * var(--u)); top:calc(-20px * var(--u)); overflow:visible; filter:drop-shadow(0 0 4px var(--c)); }
+  .fx-arrow { position:absolute; left:calc(-16px * var(--u)); top:calc(-2px * var(--u)); width:calc(32px * var(--u)); height:calc(4px * var(--u)); background:var(--c); border-radius:2px; opacity:0; box-shadow:0 0 6px var(--c); }
+  .fx-arrow::after { content:''; position:absolute; right:calc(-7px * var(--u)); top:calc(-5px * var(--u)); border-left:calc(10px * var(--u)) solid var(--c); border-top:calc(7px * var(--u)) solid transparent; border-bottom:calc(7px * var(--u)) solid transparent; }
+  .fx-spark { position:absolute; font-size:calc(40px * var(--u)); transform:translate(-50%,-50%); animation:spark .6s ease-out forwards; }
+  @keyframes spark { 0%{transform:translate(-50%,-50%) scale(.2);opacity:0} 30%{transform:translate(-50%,-50%) scale(1.3);opacity:1} 100%{transform:translate(-50%,-50%) scale(1);opacity:0} }
+  /* Sword clash: the board dims, the clashing square is magnified, and the click prompts float above it. */
+  #clashlayer { position:absolute; inset:0; z-index:20; display:none; background:rgba(8,10,16,.68); border-radius:14px; cursor:pointer; user-select:none; overflow:hidden; }
+  .zslot { position:absolute; background:#2a2614; border:3px solid var(--trk); border-radius:18px; box-shadow:0 0 34px #ffd84a55;
+           display:flex; align-items:center; justify-content:center; gap:3%; }
+  .zslot .zname { position:absolute; left:12px; top:8px; font-size:13px; color:var(--dim); }
+  .zslot .ztoks { display:flex; align-items:center; justify-content:center; gap:6%; line-height:1; }
+  .zslot .zside { display:flex; align-items:center; justify-content:center; gap:4%; }
+  .zswords { position:relative; flex:none; }
+  .zswords .cs { position:absolute; left:50%; top:50%; filter:drop-shadow(0 0 8px var(--c)); }
+  .zrow { position:absolute; left:3%; right:3%; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
+  .zrow .zt { font-weight:800; color:var(--trk); font-size:16px; letter-spacing:.5px; }
+  .zrow .zs { font-size:12px; color:#c9cfdd; }
+  .zrow .crow { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+  .zrow .ci { width:var(--w); padding:4px 0; border:2px solid var(--line); border-radius:9px; background:var(--panel); display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .zrow .ci .ic { font-size:calc(var(--w) * .5); line-height:1; }
+  .zrow .ci svg { width:calc(var(--w) * .38); height:auto; }
+  .zrow .ci.cur { border-color:var(--trk); transform:translateY(-4px); box-shadow:0 4px 12px #0008; }
+  .zrow .ci.ok { border-color:var(--ok); background:#1f3a2a; }
+  .zrow .ci.bad { border-color:#ff5c6c; background:#4a2229; }
+  .zrow .miss { font-size:14px; font-weight:700; }
+  /* Bottom action bar */
+  #bar { display:flex; flex-direction:column; align-items:center; gap:8px; padding:6px 0 2px; }
+  #barinfo { display:flex; align-items:center; gap:14px; flex-wrap:wrap; justify-content:center; min-height:24px; font-size:14px; }
+  .pips { font-size:20px; letter-spacing:3px; }
+  #pick { font-size:14px; } #pick .btns { display:inline-flex; margin-left:8px; }
+  .btns { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+  button.act, button.sm { background:#2a3040; color:var(--txt); border:2px solid transparent; border-radius:10px; padding:12px 18px; font-size:16px; cursor:pointer; }
+  button.sm { padding:12px 14px; }
+  #pick button.sm { padding:6px 12px; font-size:14px; }
   button.act:hover:not(:disabled), button.sm:hover:not(:disabled) { background:#343b50; }
   button.act.sel { border-color:var(--ok); }
   button:disabled { opacity:.4; cursor:not-allowed; }
-  #fight { background:var(--you); color:#06101c; font-weight:700; border:0; border-radius:8px; padding:10px; font-size:15px; cursor:pointer; }
+  #fight { background:var(--you); color:#06101c; font-weight:700; border:0; border-radius:10px; padding:12px 26px; font-size:17px; cursor:pointer; }
   #fight:disabled { background:#2a3040; color:var(--txt); }
-  #log { font-size:13px; line-height:1.5; max-height:150px; overflow:auto; color:#c9cfdd; }
-  #msg { font-weight:700; min-height:22px; text-align:center; }
-  details { max-width:760px; width:100%; font-size:13px; color:var(--dim); }
-  details li { margin:2px 0; }
+  #extra { max-width:900px; margin:0 auto; padding:10px 14px 30px; font-size:13px; color:var(--dim); }
+  #extra details { margin-bottom:10px; } #extra li { margin:2px 0; }
+  #log { font-size:13px; line-height:1.5; max-height:200px; overflow:auto; color:#c9cfdd; margin-top:6px; }
 </style>
 </head>
 <body>
-<h1>Joseon Duel</h1>
-<div id="vbar"></div>
+<div id="app">
+  <div id="head">
+    <h1>Joseon Duel</h1>
+    <details id="tuning"><summary>⚙ Tuning</summary><div id="vbar"></div></details>
+  </div>
+  <div id="top"></div>
+  <div id="msg"></div>
 
-<div id="top"></div>
-<div id="msg"></div>
+  <div id="stage">
+    <div id="boardwrap"><div id="board"></div><div id="fx"></div><div id="clashlayer"></div></div>
+  </div>
 
-<div id="main">
-  <div id="boardwrap"><div id="board"></div><div id="fx"></div><div id="clash" hidden></div></div>
-  <div class="panel">
-    <div class="box">
-      <h3>ENEMY PLANS (revealed)</h3>
-      <div id="enemyList"></div>
+  <div id="bar">
+    <div id="barinfo"><span>AP <span class="pips" id="pips"></span></span><span id="pick"></span></div>
+    <div class="btns">
+      <button class="act" data-a="move">👣 Move (1)</button>
+      <button class="act" data-a="melee">⚔️ Melee (1)</button>
+      <button class="act" data-a="ranged">🏹 Ranged (2+)</button>
+      <button class="act" data-a="guard">🛡️ Guard (1)</button>
+      <button class="sm" id="undo">↩ Undo</button>
+      <button class="sm" id="clear">✕ Clear</button>
+      <button id="fight">Fight!</button>
     </div>
-    <div class="box">
-      <h3>YOUR PLAN — AP left <span class="pips" id="pips"></span></h3>
-      <ul class="plan" id="myList"></ul>
-      <div id="pick"></div>
-      <div class="btns" style="margin-top:8px">
-        <button class="act" data-a="move">👣 Move (1)</button>
-        <button class="act" data-a="melee">⚔️ Melee (1)</button>
-        <button class="act" data-a="ranged">🏹 Ranged (2+)</button>
-        <button class="act" data-a="guard">🛡️ Guard (1)</button>
-        <button class="sm" id="undo">↩ Undo</button>
-        <button class="sm" id="clear">✕ Clear</button>
-      </div>
-    </div>
-    <button id="fight">Fight!</button>
   </div>
 </div>
 
-<div class="box" style="max-width:760px;width:100%"><h3>BATTLE LOG</h3><div id="log"></div></div>
+<div id="extra">
+<details><summary>Battle log</summary><div id="log"></div></details>
 
 <details>
   <summary>Rules (as implemented)</summary>
   <ul>
     <li>You (<span class="v-hp"></span> HP) face two enemies (<span class="v-ehp"></span> HP each). Defeat both to win; you lose at 0 HP.</li>
-    <li>Each round everyone plans up to <span class="v-ap"></span> AP worth of actions. The enemies plan first and show everything.</li>
+    <li>Each round everyone plans up to <span class="v-ap"></span> AP worth of actions (the bigger the map, the more AP). The enemies plan first; their numbered action badges show on the board.</li>
     <li>The battle runs in steps: every unit's 1st action resolves together, then every 2nd action, and so on. Within a step: guards, then moves, then attacks.</li>
     <li>Move: 1 AP, one square in any direction, diagonals included. Guard: 1 AP, blocks one hit landing on the same step it is played (it ends with that step).</li>
     <li>Melee: 1 AP, hits any opponent in your own square.</li>
     <li>Ranged: 1 + n AP, where n = squares to the target (diagonals count as 1). It can't target your own square, so the cheapest is 2 AP (neighbouring square), and with <span class="v-ap"></span> AP you can reach at most <span class="v-reach"></span> square(s) away. Hover a target to see the highlighted track and distance. It hits any opponent standing on the target square when it fires. Cost is measured from where you will be at that point of your plan.</li>
     <li>You can't shoot the unit sharing your square (a ranged target can never be your own square). To hit it, melee it, or step to a neighbouring square and shoot from there. Shooting someone in a different square is always allowed. A shot is locked in when planned: if someone steps onto the shooter's square, the shot still goes to its target square.</li>
-    <li>Everyone can share a square. If you melee on the same step as an enemy who is meleeing you in your shared square, the two strikes cancel. A clash takes priority, so you don't get to choose a target for that melee.</li>
+    <li>Everyone can share a square. If you melee on the same step as an enemy who is meleeing you in your shared square, the two strikes clash. A clash takes priority, so you don't get to choose a target for that melee.</li>
     <li>The enemies fight differently. Enemy A is a Melee Chaser: it chases you and prefers melee. Enemy B is a Ranged Sniper: it keeps its distance and shoots, and guards or backs away if you get close. Either will go all-in on an attack that could finish you off.</li>
     <li>An attack hits only one unit. If several enemies will stand on the square you attack, you choose which one to hit (the game asks when you plan it).</li>
     <li>Knock-back: a unit that takes melee damage is pushed to a random adjacent square (a guarded, fully blocked hit doesn't push).</li>
-    <li>Clash: when your melee and an enemy's melee meet in your square, the swords lock. A row of 3–6 prompts appears (the range depends on the enemy): left-click on a ⚔️ prompt, right-click on a 🛡️ prompt. Two wrong clicks and you lose the clash: every clashing enemy hits you and you are knocked to an adjacent square. Otherwise you win: you hit every clashing enemy and knock them back. If several enemies clash with you at once, their prompts add up into one longer row, but the limit stays at two misses.</li>
+    <li>Clash: the clashing square zooms in and a row of prompts floats above it (3–6 per enemy, depending on the enemy): left-click on a ⚔️ prompt, right-click on a 🛡️ prompt. Two wrong clicks and you lose the clash: every clashing enemy hits you and you are knocked to an adjacent square. Otherwise you win: you hit every clashing enemy and knock them back. If several enemies clash with you at once, their prompts add up into one longer row, but the limit stays at two misses.</li>
     <li>Each hit deals <span class="v-dmg"></span> damage. Enemies never hurt each other.</li>
   </ul>
 </details>
+</div>
 
 <script>
 // ---- Versions: edit the numbers here to tune each board size (or override from the bar above the board) ----
 const VERSIONS = {
-  3: { AP:3, HP_P:6, HP_E:10, DMG:2 },
-  4: { AP:4, HP_P:6, HP_E:10, DMG:2 },
+  3: { AP:3, HP_P:8, HP_E:8, DMG:2 },   // AP follows the map size: 3×3 → 3 AP, 4×4 → 4 AP, 5×5 → 5 AP
+  4: { AP:4, HP_P:8, HP_E:8, DMG:2 },
+  5: { AP:5, HP_P:8, HP_E:8, DMG:2 },
 };
 const Q = new URLSearchParams(location.search);
 const N = 3;   // 4×4 is closed for now (its settings stay in VERSIONS above); to reopen it, allow n=4 here and in the bar
@@ -232,7 +244,7 @@ function simulateStep(s, plans, i, clashFn = randClash){
       let n = hits[v];
       if (s[v].g){ s[v].g = false; n--; log.push(`${UNITS[v].name}'s guard blocks a hit.`); }
       if (n > 0){ hitCells.push(s[v].pos); tookDamage.add(v);   // only squares of units that actually take damage blink red
-                  s[v].hp = Math.max(0, s[v].hp - n*DMG); log.push(`${UNITS[v].name} takes ${n*DMG} damage${s[v].hp<=0?' and is defeated!':'.'}`); }
+                  s[v].hp = Math.max(0, s[v].hp - n*DMG); log.push(`${UNITS[v].name} ${v==='p' ? 'take' : 'takes'} ${n*DMG} damage${s[v].hp<=0?' and is defeated!':'.'}`); }
     }
     // Knock-back: whoever lost a clash, and anyone who took melee damage, is pushed to an adjacent square.
     const pushSet = new Set();
@@ -427,7 +439,7 @@ function aiPlan(state, k, chosen){
 /* ---------- UI ---------- */
 const $ = id => document.getElementById(id);
 const board = $('board');
-board.style.gridTemplateColumns = board.style.gridTemplateRows = `repeat(${N}, ${N>3?96:110}px)`;
+board.style.gridTemplateColumns = board.style.gridTemplateRows = `repeat(${N}, 1fr)`;
 for (let i=0; i<N*N; i++){
   const b = document.createElement('button'); b.className = 'cell'; b.dataset.i = i;
   b.addEventListener('click', () => onCell(i));
@@ -492,9 +504,6 @@ function render(flash=[], trail=[]){
     $('m_'+k).textContent = alive(S,k) ? `HP ${S[k].hp}/${maxHp}${S[k].g?' · guarding':''}` : 'Defeated';
     $('side_'+k).classList.toggle('dead', !alive(S,k));
   }
-  $('enemyList').innerHTML = planning ? ENEMIES.filter(k=>alive(S,k)).map(k =>
-    `<div class="who ${k}">${UNITS[k].name} ${UNITS[k].tok}</div><ul class="plan">${planRows(foePlans[k])}</ul>`).join('') : '';
-  $('myList').innerHTML = planRows(myPlan);
   const ap = left(myPlan);
   $('pips').textContent = '●'.repeat(ap) + '○'.repeat(AP-ap);
   document.querySelectorAll('button.act').forEach(b => {
@@ -545,6 +554,14 @@ $('fight').onclick = battle;
 /* ---------- attack animations ---------- */
 const FXCOL = { p:'#4aa3ff', a:'#ff5c6c', b:'#ffa24a' };
 const $fx = $('fx'), $wrap = $('boardwrap');
+// The board is as big as the screen allows; animation sizes follow the square size (U = square size / 110px).
+let U = 1;
+function layout(){
+  const w = $wrap.clientWidth, cell = (w - (N-1)*8) / N;
+  U = cell / 110;
+  $wrap.style.setProperty('--cell', cell + 'px'); $wrap.style.setProperty('--u', U);
+}
+new ResizeObserver(layout).observe($wrap); layout();
 function center(i){
   const w = $wrap.getBoundingClientRect(), c = board.children[i].getBoundingClientRect();
   return { x:c.left-w.left+c.width/2, y:c.top-w.top+c.height/2 };
@@ -577,7 +594,7 @@ function swingAnim(k, cell, mid){          // sword held out from the attacker, 
 }
 function shootAnim(k, from, to){            // bow held toward the target; arrow leaves it and flies along the same line
   const col = FXCOL[k], a = unitCenter(k, from), b = center(to), ang = Math.atan2(b.y-a.y, b.x-a.x), deg = ang*180/Math.PI;
-  const bx = a.x + Math.cos(ang)*20, by = a.y + Math.sin(ang)*20;     // bow sits just in front of the archer
+  const bx = a.x + Math.cos(ang)*20*U, by = a.y + Math.sin(ang)*20*U;    // bow sits just in front of the archer
   const bow = document.createElement('div'); bow.className = 'fx-bow'; bow.style.left = bx+'px'; bow.style.top = by+'px';
   bow.style.setProperty('--c', col); bow.innerHTML = BOW;
   bow.animate([ { transform:`rotate(${deg}deg) scale(.3)`, opacity:0 }, { transform:`rotate(${deg}deg) scale(1.1)`, opacity:1, offset:.25 },
@@ -594,56 +611,78 @@ function sparkAnim(cell){
   el.className = 'fx-spark'; el.textContent = '💥'; el.style.left = x+'px'; el.style.top = y+'px';
   return fxAdd(el, 650);
 }
-// ---- Sword clash minigame ----
-const MOUSE = side => `<svg width="20" height="28" viewBox="0 0 20 28"><rect x="1" y="1" width="18" height="26" rx="9" fill="none" stroke="#8d97ab" stroke-width="1.5"/>`
+// ---- Sword clash minigame (played inside the battle map) ----
+const MOUSE = side => `<svg viewBox="0 0 20 28"><rect x="1" y="1" width="18" height="26" rx="9" fill="none" stroke="#8d97ab" stroke-width="1.5"/>`
   + `<path d="${side==='L' ? 'M10 1 A9 9 0 0 0 1 10 L1 13 L10 13 Z' : 'M10 1 A9 9 0 0 1 19 10 L19 13 L10 13 Z'}" fill="#ffd84a"/>`
   + `<line x1="10" y1="1" x2="10" y2="13" stroke="#8d97ab" stroke-width="1.2"/></svg>`;
-function clashSwords(cell, enemy){            // two crossed swords that shake like a power struggle
-  const { x, y } = center(cell), el = document.createElement('div');
-  el.className = 'fx-clashswords'; el.style.left = x+'px'; el.style.top = y+'px'; el.style.setProperty('--c', '#ffd84a');
-  el.innerHTML = `<div class="cs" style="--c:${FXCOL.p}">${SWORD}</div><div class="cs" style="--c:${FXCOL[enemy]}">${SWORD}</div>`;
-  $fx.appendChild(el);
-  [...el.children].forEach((c, n) => {
-    const a = n ? -38 : 38, o = n ? 1 : -1;
-    c.animate([ { transform:`translate(-11px,-26px) rotate(${a-5}deg) translateX(${-3*o}px)` }, { transform:`translate(-11px,-26px) rotate(${a+5}deg) translateX(${3*o}px)` } ],
-              { duration:80 + n*14, iterations:Infinity, direction:'alternate', easing:'linear' });
-  });
-  return el;
-}
-// Plays one clash: a row of prompts (sword = left click, shield = right click). Resolves 'win' or 'lose'.
+// The clashing square zooms to the middle of the board, the other squares dim, and the click prompts float above it.
+// Prompts: sword = left click, shield = right click. Resolves 'win' or 'lose'.
 function runClash(clashers, cell){
   return new Promise(resolve => {
     const rolls = clashers.map(k => { const c = UNITS[k].clash || { min:3, max:6 }; return c.min + rnd(c.max - c.min + 1); });
     const n = rolls.reduce((a, b) => a + b, 0);   // prompts add up: every clashing enemy lengthens the row, the miss limit stays fixed
     const seq = Array.from({ length:n }, () => Math.random() < 0.5 ? 'L' : 'R');
-    const box = $('clash'), swords = clashSwords(cell, clashers[0]);
-    let idx = 0, fails = 0, ready = false;
+    const marks = [];                              // 'ok' | 'bad' per answered prompt
+    const layer = $('clashlayer'), W = $wrap.clientWidth, H = $wrap.clientHeight;
+    const S = Math.min(W * 0.44, H * 0.36), sx = (W - S) / 2, sy = H * 0.66 - S / 2;    // the magnified square
+    const sw = S * (clashers.length > 1 ? 0.34 : 0.40), fs = S * (0.86 - sw / S) / ((1 + clashers.length) * 1.15);   // everyone + the swords fit inside the square
+    const tok = ks => ks.map(k => `<span style="font-size:${fs}px;line-height:1">${UNITS[k].tok}</span>`).join('');
+    layer.innerHTML = `<div class="zrow"></div>`
+      + `<div class="zslot" style="left:${sx}px;top:${sy}px;width:${S}px;height:${S}px"><span class="zname">${cname(cell)}</span>`
+      + `<div class="zside">${tok(['p'])}</div>`
+      + `<div class="zswords" style="width:${sw}px;height:${sw}px"><div class="cs" style="--c:${FXCOL.p}">${SWORD}</div><div class="cs" style="--c:${FXCOL[clashers[0]]}">${SWORD}</div></div>`
+      + `<div class="zside">${tok(clashers)}</div></div>`;
+    layer.style.display = 'block';
+    const row = layer.querySelector('.zrow'), slot = layer.querySelector('.zslot');
+    row.style.bottom = (H - sy + 14) + 'px';
+    layer.querySelectorAll('.cs svg').forEach(v => { v.style.width = (sw*0.44) + 'px'; v.style.height = (sw*0.72) + 'px'; v.style.display = 'block'; });
+    // swords shake against each other like a power struggle
+    [...layer.querySelectorAll('.cs')].forEach((c, k) => {
+      const a = k ? -38 : 38, o = k ? 1 : -1, base = `translate(-50%,-50%) rotate(`;
+      c.animate([ { transform:`${base}${a-5}deg) translateX(${-S*0.012*o}px)` }, { transform:`${base}${a+5}deg) translateX(${S*0.012*o}px)` } ],
+                { duration:80 + k*14, iterations:Infinity, direction:'alternate', easing:'linear' });
+    });
+    // magnify: grow the square out of its place on the board
+    const cr = board.children[cell].getBoundingClientRect(), wr = $wrap.getBoundingClientRect();
+    const dx = cr.left - wr.left + cr.width/2 - (sx + S/2), dy = cr.top - wr.top + cr.height/2 - (sy + S/2), sc = cr.width / S;
+    slot.animate([ { transform:`translate(${dx}px,${dy}px) scale(${sc})`, opacity:.4 }, { transform:'translate(0,0) scale(1)', opacity:1 } ], { duration:320, easing:'ease-out' });
+    row.animate([ { opacity:0 }, { opacity:1 } ], { duration:320, delay:120, fill:'backwards' });
+
+    let w = Math.round(Math.min(n <= 6 ? 58 : n <= 9 ? 50 : n <= 12 ? 44 : 38, W * 0.1));
+    for (; w > 24; w -= 2){                       // shrink the prompts until the whole row fits above the magnified square
+      const perRow = Math.max(1, Math.floor((W * 0.94 + 6) / (w + 6)));
+      if (Math.ceil(n / perRow) * (w * 1.25 + 16) + 74 <= sy - 14) break;
+    }
+    let idx = 0, ready = false;
+    const fails = () => marks.filter(m => m==='bad').length;
     const draw = (note = '') => {
-      box.innerHTML = `<div class="ct">⚔️ CLASH! ⚔️</div><div class="cs2">Left click = attack ⚔️ · Right click = guard 🛡️ · ${CLASH_MAX_FAILS} misses and you lose</div>`
-        + `<div class="crow">${seq.map((s, j) => `<div class="ci ${j===idx ? 'cur' : ''} ${box.dataset['r'+j] || ''}"><span class="ic">${s==='L' ? '⚔️' : '🛡️'}</span>${MOUSE(s)}</div>`).join('')}</div>`
-        + `<div class="miss">Misses: ${'✖'.repeat(fails)}${'◻'.repeat(CLASH_MAX_FAILS - fails)} ${note}</div>`;
+      row.style.setProperty('--w', w + 'px');
+      row.innerHTML = `<div class="zt">⚔️ CLASH! ⚔️</div><div class="zs">Left click ⚔️ attack · Right click 🛡️ guard</div>`
+        + `<div class="crow">${seq.map((s, j) => `<div class="ci ${marks[j] || (j===idx && !note.includes('—') ? 'cur' : '')}"><span class="ic">${s==='L' ? '⚔️' : '🛡️'}</span>${MOUSE(s)}</div>`).join('')}</div>`
+        + `<div class="miss">Misses ${'✖'.repeat(fails())}${'◻'.repeat(CLASH_MAX_FAILS - fails())} ${note}</div>`;
     };
-    for (let j = 0; j < n; j++) delete box.dataset['r'+j];
-    box.hidden = false; draw('Get ready…'); say('Sword clash! Click the matching mouse button for each icon.');
+    say('Sword clash!'); draw('Get ready…');
     const finish = res => {
-      box.removeEventListener('mousedown', onDown); box.removeEventListener('contextmenu', noMenu);
+      layer.removeEventListener('mousedown', onDown); layer.removeEventListener('contextmenu', noMenu);
       draw(res==='win' ? '— you win the clash! 💪' : '— you lose the clash!');
-      setTimeout(() => { box.hidden = true; box.innerHTML = ''; swords.remove(); resolve(res); }, 900);
+      setTimeout(() => {
+        slot.animate([ { transform:'translate(0,0) scale(1)', opacity:1 }, { transform:`translate(${dx}px,${dy}px) scale(${sc})`, opacity:.3 } ], { duration:260, easing:'ease-in', fill:'forwards' });
+        row.animate([ { opacity:1 }, { opacity:0 } ], { duration:200, fill:'forwards' });
+        setTimeout(() => { layer.style.display = 'none'; layer.innerHTML = ''; resolve(res); }, 280);
+      }, 900);
     };
     const onDown = e => {
       e.preventDefault();
       if (!ready || (e.button !== 0 && e.button !== 2)) return;
-      const hit = (e.button === 0 ? 'L' : 'R') === seq[idx];
-      box.dataset['r'+idx] = hit ? 'ok' : 'bad';
-      if (!hit) fails++;
+      marks[idx] = (e.button === 0 ? 'L' : 'R') === seq[idx] ? 'ok' : 'bad';
       idx++;
-      if (fails >= CLASH_MAX_FAILS) return finish('lose');
+      if (fails() >= CLASH_MAX_FAILS) return finish('lose');
       if (idx >= n) return finish('win');
       draw();
     };
     const noMenu = e => e.preventDefault();
-    box.addEventListener('mousedown', onDown); box.addEventListener('contextmenu', noMenu);
-    setTimeout(() => { ready = true; draw(); }, 500);
+    layer.addEventListener('mousedown', onDown); layer.addEventListener('contextmenu', noMenu);
+    setTimeout(() => { ready = true; draw(); }, 600);
   });
 }
 function playFx(st){
@@ -690,8 +729,7 @@ async function battle(){
     const probe = simulateStep(clone(cur), plans, i, () => 'win');   // preview of this step: who moves, whether a clash happens
     if (!probe) continue;
     await sleep(850);
-    const info = Object.keys(probe.fire).map(k => `${UNITS[k].name}: ${ICON[probe.fire[k].t]} ${describe(probe.fire[k])}`).join('  ⟷  ');
-    say(`Step ${i+1} — ${info}`);
+    say(`Round ${round} — step ${i+1} of ${AP}`);
     let before = tokenCenters();
     S = clone(probe.mid); render();              // everyone moves/guards first (tokens slide to their new squares)...
     await slideTokens(before);
