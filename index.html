@@ -24,8 +24,9 @@
   .col { flex:0 0 clamp(150px, 19vw, 230px); display:flex; flex-direction:column; justify-content:center; gap:8px; overflow:auto; }
   .col::before { content:attr(data-title); font-size:11px; letter-spacing:1px; color:var(--dim); text-align:center; }
   .side { background:var(--panel); border:2px solid transparent; border-radius:10px; padding:7px 10px; }
-  .side.pc { cursor:pointer; } .side.pc:hover { background:#232938; }
-  .side.pc.on { border-color:var(--c); background:#262c3a; }
+  .side { cursor:pointer; } .side:hover { background:#232938; }
+  .side.on { border-color:var(--c); background:#262c3a; }
+  .side.pc.ord:not(.on) { border-color:#3a4256; }
   .side h2 { margin:0 0 5px; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .side h2 .sty { font-weight:400; font-size:10px; color:var(--dim); margin-left:4px; }
   .res { display:flex; justify-content:space-between; align-items:center; gap:6px; margin-top:4px; }
@@ -48,7 +49,7 @@
   #board { display:grid; gap:8px; width:100%; height:100%; }
   #fx { position:absolute; inset:0; pointer-events:none; overflow:visible; z-index:5; }
   .cell { position:relative; background:var(--panel); border:2px solid var(--line); border-radius:12px; min-width:0; min-height:0;
-          font-size:calc(var(--cell) * .22); display:flex; flex-wrap:wrap; align-items:center; justify-content:center; align-content:center; gap:2px; color:inherit; padding:0; cursor:default; }
+          font-size:calc(var(--cell) * .19); display:flex; flex-wrap:wrap; align-items:center; justify-content:center; align-content:center; gap:2px; color:inherit; padding:0; cursor:default; }
   .cell.can { border-color:var(--ok); cursor:pointer; background:#1f2a26; }
   .cell.can:hover { background:#27382f; }
   .cell.track { border-color:var(--trk); background:#38321a; }
@@ -59,22 +60,33 @@
   .cell.flash { animation:fl .5s; }
   @keyframes fl { 0%{background:#ff5c6c88} 100%{background:var(--panel)} }
   .tok { position:relative; display:inline-block; line-height:1; }
-  /* Two lanes per square: real tokens (left) and ghosts of units that will arrive (right); each holds up to 4 icons in a 2x2 block. */
-  .lane { position:absolute; top:26%; bottom:8%; width:47%; display:flex; flex-wrap:wrap; align-content:center; justify-content:center; gap:3px 2px; }
-  .rlane { left:2%; } .rlane.solo { left:26.5%; } .glane { right:2%; }
-  .lane .tok, .lane .gh { flex:0 0 46%; text-align:center; }
-  .gh { position:relative; line-height:1; opacity:.62; border-radius:50%; outline:2px dashed var(--c); outline-offset:1px; }
-  .gh.mid { opacity:.28; outline-width:1px; }
-  .gh .gn { position:absolute; right:-34%; top:-30%; font-style:normal; font-size:max(10px, .5em); line-height:1; font-weight:800; background:var(--c); color:#10131a; border-radius:8px; padding:1px 4px; }
-  .gm { flex:0 0 100%; text-align:center; font-size:.5em; color:var(--dim); }
+  /* Icon positions depend ONLY on how many allies / enemies are on the square, never on badges (badges are overlays that may overflow the square):
+     allies left of the centre, enemies right, each team a column on a fixed grid pitch; a lone side is centred. 2 vs 2 is a 2x2 grid. */
+  .stack { position:absolute; inset:0; pointer-events:none; }
+  .sc { display:contents; }
+  .stack .tok, .stack .gh { position:absolute; width:1.1em; height:1.1em; margin:-.55em 0 0 -.55em; display:flex; align-items:center; justify-content:center; line-height:1; pointer-events:auto; }
+  .ic { position:relative; display:inline-block; line-height:1; }
+  .gh { opacity:.62; } .gh .ic { border-radius:50%; outline:2px dashed var(--c); outline-offset:1px; }
+  .gh.risky .ic { outline:2px dashed #ff3b4e; outline-offset:1px; box-shadow:0 0 6px #ff3b4e; }   /* may be blocked: the square is too full at that step */
+  .gh.mid { opacity:.28; } .gh.mid .ic { outline-width:1px; }
+  /* badge column beside an icon: allies on its left, enemies on its right, stacked top to bottom by turn number */
+  .abs { position:absolute; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:1px; white-space:nowrap; z-index:2; pointer-events:none; }
+  .abs.L { right:calc(100% - .12em); align-items:flex-end; } .abs.R { left:calc(100% - .12em); align-items:flex-start; }
+  .ab { font-style:normal; font-size:max(10px, .55em); line-height:1; font-weight:800; background:var(--c); color:#10131a; border-radius:7px; padding:1px 4px; }
+  .gm { position:absolute; left:0; right:0; bottom:3%; text-align:center; font-size:.5em; color:var(--dim); }
+  /* guard success: a blue clash burst over a shaking shield */
+  .fx-guard { position:absolute; width:0; height:0; z-index:6; }
+  .fx-guard .gs { position:absolute; left:0; top:0; font-size:calc(46px * var(--u)); line-height:1; transform:translate(-50%,-50%); animation:gshake .09s linear 8; }
+  .fx-guard .gb { position:absolute; left:calc(10px * var(--u)); top:calc(6px * var(--u)); font-size:calc(38px * var(--u)); line-height:1; transform:translate(-50%,-50%); filter:hue-rotate(185deg) saturate(1.8) brightness(1.15); animation:gpop .7s ease-out forwards; }
+  @keyframes gshake { 0% { transform:translate(-50%,-50%) rotate(-9deg); } 50% { transform:translate(-44%,-50%) rotate(9deg); } 100% { transform:translate(-50%,-50%) rotate(-9deg); } }
+  @keyframes gpop { 0% { transform:translate(-50%,-50%) scale(.2); opacity:0; } 30% { transform:translate(-50%,-50%) scale(1.25); opacity:1; } 100% { transform:translate(-50%,-50%) scale(1); opacity:.15; } }
   .cell.tgt { box-shadow:inset 0 0 0 2px rgba(255,92,108,.38); }
+  #plabels { position:absolute; inset:0; pointer-events:none; z-index:4; font-size:calc(var(--cell) * .19); }
+  #plabels .ab { position:absolute; }
   #plans { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3; overflow:visible; }
   #showall.on { border-color:var(--ok); color:var(--ok); }
-  .tok.sel { outline:3px solid var(--c); outline-offset:2px; border-radius:50%; }
-  .tok .shield { position:absolute; right:-22%; bottom:-8%; font-size:.55em; font-style:normal; }
-  .badges { position:absolute; right:6px; top:4px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:3px; max-width:calc(var(--cell) * .8); }
-  .badges .bdg { font-size:max(11px, calc(var(--cell) * .095)); padding:1px 5px; border-radius:7px; font-weight:700; color:#10131a; }
-  .badges .bdg { background:var(--c); }
+  .tok.sel .ic { outline:3px solid var(--c); outline-offset:2px; border-radius:50%; }
+  .ic .shield { position:absolute; right:-22%; bottom:-8%; font-size:.55em; font-style:normal; }
   /* Attack animations scale with the board (--u = cell size / 110px). */
   .fx-swing { position:absolute; width:0; height:0; }
   .fx-swing svg { position:absolute; width:calc(22px * var(--u)); height:calc(36px * var(--u)); left:calc(-11px * var(--u)); top:calc(-58px * var(--u)); filter:drop-shadow(0 0 5px var(--c)); overflow:visible; }
@@ -141,7 +153,7 @@
   <div id="arena">
     <div class="col" id="pcol"></div>
     <div id="stage">
-      <div id="boardwrap"><div id="board"></div><svg id="plans"></svg><div id="fx"></div><div id="clashlayer"></div></div>
+      <div id="boardwrap"><div id="board"></div><svg id="plans"></svg><div id="plabels"></div><div id="fx"></div><div id="clashlayer"></div></div>
     </div>
     <div class="col" id="ecol"></div>
   </div>
@@ -168,7 +180,7 @@
   <summary>Rules (as implemented)</summary>
   <ul>
     <li>Your party (<span class="v-np"></span> character<span class="v-nps"></span>, <span class="v-hp"></span> HP each) faces <span class="v-ne"></span> enemies (<span class="v-ehp"></span> HP each). Defeat every enemy to win; you lose when your whole party is down. Pick a character in the bar below the board (or click it on the map) to plan its actions.</li>
-    <li>Each round everyone plans up to <span class="v-ap"></span> AP worth of actions (the bigger the map, the more AP). The enemies plan first; their plans show on the board: a numbered ghost token where a unit will end up (earlier stops appear when you hover that unit, for the character you are ordering, or with the 👁 All steps toggle / Shift key), a thin line with a step number for each ranged shot (it brightens when you hover the shooter, the line or the target square), and numbered ⚔️ / 🛡️ badges for melee and guard. Click an enemy card to keep it highlighted.</li>
+    <li>Each round everyone plans up to <span class="v-ap"></span> AP worth of actions (the bigger the map, the more AP). The enemies plan first; their plans show on the board: a numbered ghost token where a unit will end up (earlier stops appear when you hover that unit, for the character you are ordering, or with the 👁 All steps toggle / Shift key), a thin line with a step number for each ranged shot (it brightens when you hover the shooter, the line or the target square), and small badges beside each unit's icon (👣 arrival, ⚔️ melee, 🛡️ guard, each with its step number; on the left of allies and the right of enemies, top to bottom in turn order). Click an enemy card to keep it highlighted.</li>
     <li>The battle runs in steps: every unit's 1st action resolves together, then every 2nd action, and so on. Within a step: guards, then moves, then attacks.</li>
     <li>Move: 1 AP per square, in one go as far as your remaining AP allows (like choosing a ranged target; diagonals count as 1 square). The cost is shown on each reachable square. Guard: 1 AP, blocks one hit landing on the same step it is played (it ends with that step). <b>Guard charge:</b> a guard that really blocks a hit gives that character +1 AP next round only (shown as a gold, blinking dot — use it or lose it). The bonus never exceeds +1, but it is repeatable: guard successfully again (even in a bonus round) to earn it again.</li>
     <li>Melee: 1 AP, hits any opponent in your own square.</li>
@@ -240,7 +252,7 @@ function track(a, b){
 }
 
 let S, myPlans, foePlans, sel, mode, phase, pending = null, round = 1;
-let hoverU = null, pinU = null, hoverCell = null, hoverLine = null, showAll = false, LINES = [];   // plan-overlay focus state
+let hoverU = null, picked = null, hoverCell = null, hoverLine = null, showAll = false, LINES = [];   // plan-overlay focus state
 let PAP = AP, PSHOOT = true;   // PSHOOT = plans may include ranged attacks (off for Melee Chasers). PAP = AP of the unit a plan is being generated for (base AP + its one-round guard bonus)   // phase: ai | plan | battle | over
 
 const projPos = (plan, pos) => { for (const a of plan) if (a.t==='move') pos = a.to; return pos; };
@@ -322,7 +334,7 @@ function simulateStep(s, plans, i, clashFn = randClash, pre = null, seed = null)
     cl.players.forEach(p => cancelled.add(p)); cl.enemies.forEach(e => cancelled.add(e));
     log.push(`${names(cl.players)} and ${names(cl.enemies)} clash at ${cname(cl.cell)} — the melee strikes cancel out!`);
   }
-  const hits = {}, meleed = new Set(), tookDamage = new Set(), pushSet = new Set(), lost = new Set();   // lost = units on the losing side of a clash
+  const hits = {}, meleed = new Set(), tookDamage = new Set(), pushSet = new Set(), lost = new Set(), blocked = [];   // lost = units on the losing side of a clash
   clashes.forEach((cl, idx) => {
     cl.outcome = clashFn(cl, idx);
     const who = names(cl.players), plural = cl.players.length > 1 || who==='You';
@@ -352,7 +364,7 @@ function simulateStep(s, plans, i, clashFn = randClash, pre = null, seed = null)
   }
   for (const v in hits){
     let n = hits[v];
-    if (s[v].g){ s[v].g = false; n--;
+    if (s[v].g){ s[v].g = false; n--; blocked.push(v);
       if (!s[v].earn){ s[v].earn = true; log.push(`${UNITS[v].name}'s guard blocks a hit — +1 AP next round!`); }
       else log.push(`${UNITS[v].name}'s guard blocks a hit.`); }
     if (n > 0){ hitCells.push(s[v].pos); tookDamage.add(v);   // only squares of units that actually take damage blink red
@@ -388,7 +400,7 @@ function simulateStep(s, plans, i, clashFn = randClash, pre = null, seed = null)
     if (to === null){ log.push(`${UNITS[v].name} ${vb(v,'have','has')} no room to be knocked back.`); continue; }
     s[v].pos = to; pushes[v] = { from, to }; log.push(`${UNITS[v].name} ${vb(v,'are','is')} knocked back to ${cname(to)}.`);
   }
-  const st = { i, fire, log, mid, snap:clone(s), hitCells, trail, clashes, pushes };
+  const st = { i, fire, log, mid, snap:clone(s), hitCells, trail, clashes, pushes, blocked };
   for (const k of ALL) s[k].g = false;   // guard only covers the step it was played in
   return st;
 }
@@ -520,6 +532,7 @@ function coveragePlans(start, cell){
 }
 
 const GUARD_VARIANTS = 60;
+const GANG_BONUS = 0.4;   // score per extra enemy meleeing the same square on the same step (outnumbering a player is a nice-to-have, never a must)
 const STYLE_AI = { brawler:{ hp:0.4, earn:0.5 }, hybrid:{ hp:0.65, earn:0.6 }, sniper:{ hp:0.9, earn:0.9 } };   // self-HP weight, value of a guard charge
 // Plans for enemy k, shaped by its tactic style; `chosen` holds plans other enemies already committed to.
 // Each candidate plan is scored by simulating it against many guessed plans for every player character.
@@ -555,6 +568,19 @@ function aiPlanCore(state, k, chosen){
     }
   }
   for (let c=0; c<N*N; c++) cands.push(...coveragePlans(myPos, c));
+  // Gang-up plans: join another enemy's melee (same square, same step) so the player is outnumbered in the clash. Melee styles only.
+  const meleeSpots = [];                                                // [step, square] of melee strikes the other enemies have already committed to
+  for (const e of others){ const pl = chosen[e] || []; let p = state[e].pos; pl.forEach((a, q) => { if (a.t==='move') p = a.to; else if (a.t==='melee') meleeSpots.push([q, p]); }); }
+  if (style !== 'sniper') for (const [q, c] of meleeSpots){
+    const plan = []; let cost = 0;
+    if (c !== myPos){ const d = dist(myPos, c); if (d > PAP) continue; plan.push(mk('move', { to:c, cost:d })); cost += d; }
+    if (plan.length > q) continue;
+    while (plan.length < q){ plan.push(mk('guard')); cost++; }
+    plan.push(mk('melee')); cost++;
+    if (cost > PAP) continue;
+    while (cost < PAP){ plan.push(mk(Math.random() < 0.6 ? 'melee' : 'guard')); cost++; }
+    cands.push(plan);
+  }
   // Guard variants: swap one 1-AP melee for a guard at each timing, so guards are tested on purpose (a block earns +1 AP next round).
   for (let q = 0, base = cands.length; q < GUARD_VARIANTS; q++){
     const c = cands[rnd(base)].slice(), idx = c.map((a, j) => j).filter(j => c[j].t==='melee');
@@ -586,6 +612,11 @@ function aiPlanCore(state, k, chosen){
     const swung = new Set(); let repeats = 0;
     cand.forEach((a, q) => { if (a.t==='melee'){ const c = epos(q); if (swung.has(c)) repeats++; swung.add(c); } });
     sc -= 0.9*repeats;
+    if (style !== 'sniper'){                                           // outnumbering a player in melee (2 or 3 vs 1) is a nice-to-have, never a must
+      let gang = 0;
+      cand.forEach((a, q) => { if (a.t==='melee'){ const c = epos(q); gang += meleeSpots.filter(([q2, c2]) => q2===q && c2===c).length; } });
+      sc += GANG_BONUS*Math.min(gang, 2);
+    }
     if (style==='brawler') sc += 0.35*Math.min(count('melee'),1) + 0.08*Math.max(0,count('melee')-1) - 0.25*cand.filter(a => a.t==='ranged' && a.cost>=3).length;
     else if (style==='hybrid'){
       sc += 0.35*Math.min(count('melee'),1) + 0.08*Math.max(0,count('melee')-1) + 0.12*Math.min(count('ranged'),2);   // prefers melee, shoots when it makes room
@@ -616,72 +647,122 @@ for (let i=0; i<N*N; i++){
   board.appendChild(b);
 }
 function buildCards(){
-  hoverU = pinU = hoverCell = hoverLine = null;
+  hoverU = picked = hoverCell = hoverLine = null;
   const card = k => `<div class="side${isPlayer(k) ? ' pc' : ''}" id="side_${k}" style="--c:${COL[k]}">`
     + `<h2>${UNITS[k].tok} ${UNITS[k].name}${UNITS[k].style ? `<span class="sty">${STYLE_LABEL[UNITS[k].style]}</span>` : ''}</h2>`
     + `<div class="hp"><i id="hp_${k}"></i></div><div class="res"><span class="meta" id="m_${k}"></span><span class="ap" id="ap_${k}"></span></div></div>`;
   $('pcol').dataset.title = PLAYERS.length > 1 ? 'YOUR PARTY' : 'YOU'; $('ecol').dataset.title = 'ENEMIES';
   $('pcol').innerHTML = PLAYERS.map(card).join(''); $('ecol').innerHTML = ENEMIES.map(card).join('');
   ALL.forEach(k => { $('side_'+k).onmouseenter = () => { hoverU = k; drawPlans(); }; $('side_'+k).onmouseleave = () => { hoverU = null; drawPlans(); }; });
-  ENEMIES.forEach(e => $('side_'+e).addEventListener('click', () => { if (phase==='plan'){ pinU = pinU===e ? null : e; drawPlans(); } }));   // click a character to keep its full plan shown; click again to release
-  PLAYERS.forEach(p => $('side_'+p).onclick = () => { if (phase==='plan' && alive(S,p)){ if (sel===p) pinU = pinU===p ? null : p; else { sel = p; pinU = p; } mode = null; pending = null; render(); } });   // click a card to order that character
-}
-
-// Melee and guard badges: numbered, on the square where the unit will be when it plays them. (Moves are ghosts, shots are lines.)
-function planBadges(plan, start, k, out){
-  let pos = start;
-  plan.forEach((a,i) => {
-    if (a.t==='move') pos = a.to;
-    else if (a.t==='melee' || a.t==='guard') (out[pos] = out[pos] || []).push(`<span class="bdg" style="--c:${COL[k]}">${i+1}${ICON[a.t]}</span>`);
-  });
-  return out;
+  ALL.forEach(k => $('side_'+k).onclick = () => pick(k));                  // click any character's card to pick it (click again to release)
 }
 
 /* ---------- plan overlay: ghosts for moves, thin lines for ranged shots ---------- */
 // A move shows as a ghost token where the unit will stand: always the final destination (numbered with the step it arrives), and the earlier
 // destinations (fainter, numbered) only for focused units or while "All steps" is on. A ranged shot is a thin translucent line from the firing
 // square to the landing square with the step number near the landing end; it brightens when its shooter, the line, or its landing square is focused.
-const focused = k => k===hoverU || k===pinU || (phase==='plan' && k===sel);
+const badgeCol = (k, list) => `<span class="abs ${isPlayer(k) ? 'L' : 'R'}">${list.slice().sort((a, b) => a.n - b.n).map(a => `<i class="ab" style="--c:${COL[k]}">${a.n}${ICON[a.t]}</i>`).join('')}</span>`;
+const focused = k => k===hoverU || k===picked;
+// One character can be picked at a time (player or enemy): its full route stays shown until you click it again or pick someone else.
+// Picking one of your characters also makes it the one you are ordering (`sel`); picking an enemy leaves `sel` alone, so you can still give orders.
+function pick(k){
+  if (phase!=='plan' || !alive(S,k)) return;
+  if (picked===k) picked = null;
+  else { picked = k; if (isPlayer(k)){ sel = k; mode = null; pending = null; } }
+  render();
+}
 const segDist = (x, y, a, b) => { const dx = b.x-a.x, dy = b.y-a.y, L2 = dx*dx + dy*dy || 1, t = Math.max(0, Math.min(1, ((x-a.x)*dx + (y-a.y)*dy) / L2)); return Math.hypot(x - (a.x+t*dx), y - (a.y+t*dy)); };
 function drawPlans(){
   const svg = $('plans');
   if (!svg) return;
-  const planning = phase === 'plan', gh = {}, lines = [], targets = new Set();
+  const planning = phase === 'plan', gh = {}, lines = [], targets = new Set(), startActs = {};
+  const posAt = (k, j) => { const plan = (isPlayer(k) ? myPlans : foePlans)[k] || []; let p = S[k].pos; for (let q = 0; q <= j && q < plan.length; q++) if (plan[q].t==='move') p = plan[q].to; return p; };
   if (planning) for (const k of ALL){
     if (!alive(S,k)) continue;
     const plan = (isPlayer(k) ? myPlans : foePlans)[k];
     if (!plan || !plan.length) continue;
-    let pos = S[k].pos; const stops = [];
+    let pos = S[k].pos; const stops = [{ sq:pos, n:null, acts:[], shots:0 }];     // stops[0] = where the unit stands now; each move adds a stop
     plan.forEach((a, j) => {
-      if (a.t==='move'){ pos = a.to; stops.push({ sq:pos, n:j+1 }); }
-      else if (a.t==='ranged'){ lines.push({ k, from:pos, to:a.at, n:j+1, j }); targets.add(a.at); }
+      if (a.t==='move'){ pos = a.to; stops.push({ sq:pos, n:j+1, acts:[], shots:0 }); }
+      else if (a.t==='melee' || a.t==='guard') stops[stops.length-1].acts.push({ t:a.t, n:j+1 });
+      else if (a.t==='ranged'){ stops[stops.length-1].shots++; stops[stops.length-1].acts.push({ t:'ranged', n:j+1 }); lines.push({ k, from:pos, to:a.at, n:j+1, j, tgt:a.tgt, moved:stops.length-1 }); targets.add(a.at); }
     });
-    stops.forEach((st, idx) => { const fin = idx === stops.length-1; if (fin || showAll || focused(k)) (gh[st.sq] = gh[st.sq] || []).push({ k, n:st.n, fin }); });
+    startActs[k] = stops[0].acts;
+    stops.forEach((st, idx) => {
+      if (!idx) return;
+      const fin = idx === stops.length-1;
+      if (fin || showAll || focused(k) || st.acts.length || st.shots) (gh[st.sq] = gh[st.sq] || []).push({ k, n:st.n, fin, acts:st.acts, idx });
+    });
+  }
+  // arrivals into a square that cannot hold them all (cap 4) compete for the free places in a random order: mark them
+  const risky = new Set();
+  if (planning) for (let j = 0; j <= AP; j++){
+    const arr = {}, stay = {};
+    for (const u of ALL) if (alive(S,u)){
+      const plan = (isPlayer(u) ? myPlans : foePlans)[u] || [], prev = posAt(u, j-1), a = plan[j];
+      if (a && a.t==='move' && a.to!==prev) (arr[a.to] = arr[a.to] || []).push(u); else stay[prev] = (stay[prev] || 0) + 1;
+    }
+    for (const sq in arr) if (arr[sq].length > CAP - (stay[sq] || 0)) arr[sq].forEach(u => risky.add(u + ':' + j));
   }
   const cells = [...board.children];
+  board.querySelectorAll('.tok .abs').forEach(e => e.remove());                      // actions played before the unit moves sit beside its real token
+  board.querySelectorAll('.tok').forEach(t => t.style.removeProperty('--nb'));
+  for (const k in startActs) if (startActs[k].length) board.querySelectorAll(`.tok[data-u="${k}"]`).forEach(t => { t.insertAdjacentHTML('beforeend', badgeCol(k, startActs[k])); t.style.setProperty('--nb', startActs[k].length); });
   cells.forEach((el, i) => {
-    const rl = el.querySelector('.rlane'), gl = el.querySelector('.glane');
-    if (!rl || !gl) return;
+    const stack = el.querySelector('.stack');
+    if (!stack) return;
+    const sa = stack.querySelector('.sa'), se = stack.querySelector('.se');
+    stack.querySelectorAll('.gh,.gm').forEach(e => e.remove());
     const items = (gh[i] || []).sort((a, b) => b.fin - a.fin), shown = items.slice(0, 4), extra = items.length - shown.length;
-    gl.innerHTML = shown.map(g => `<span class="gh${g.fin ? '' : ' mid'}" data-g="${g.k}" style="--c:${COL[g.k]}">${UNITS[g.k].tok}<i class="gn">${g.n}</i></span>`).join('') + (extra > 0 ? `<span class="gm">+${extra}</span>` : '');
-    rl.classList.toggle('solo', !items.length);
+    shown.forEach(g => (isPlayer(g.k) ? sa : se).insertAdjacentHTML('beforeend', `<span class="gh${g.fin ? '' : ' mid'}${risky.has(g.k + ':' + (g.n-1)) ? ' risky' : ''}" data-g="${g.k}" data-idx="${g.idx}" style="--c:${COL[g.k]};--nb:${1 + g.acts.length}"><b class="ic">${UNITS[g.k].tok}</b>${badgeCol(g.k, [{ t:'move', n:g.n }, ...g.acts])}</span>`));
+    if (extra > 0) sa.insertAdjacentHTML('beforeend', `<span class="gm">+${extra}</span>`);
+    // place the icons: fixed positions from the team sizes (and, for the spacing only, how tall the tallest badge column is) so badges never pile onto each other;
+    // the icons themselves stay inside the square (the whole column spans at most .72 of it) and centred on its middle
+    const A = [...sa.children].filter(c => c.matches('.tok,.gh')), E = [...se.children].filter(c => c.matches('.tok,.gh')), both = A.length && E.length, cw = el.offsetWidth || 1;
+    const need = items => Math.max(.23, ...items.map(it => ((it.querySelector('.abs') || {}).offsetHeight || 0) / cw + .03));
+    const pitchOf = items => items.length > 1 ? Math.min(need(items), .72 / (items.length - 1)) : 0, pitch = Math.max(pitchOf(A), pitchOf(E));
+    const place = (items, x) => { const n = items.length; items.forEach((it, q) => { it.style.left = (50 + x*100) + '%'; it.style.top = (50 + (q - (n-1)/2) * (n > 1 ? pitch : 0) * 100) + '%'; }); };
+    place(A, both ? -.16 : 0); place(E, both ? .16 : 0);
     el.classList.toggle('tgt', targets.has(i));
   });
   LINES = [];
+  $('plabels').innerHTML = '';
   if (!planning || !cells.length || !lines.length){ svg.innerHTML = ''; return; }
-  const cell = cells[0].offsetWidth, lw = Math.max(1.6, cell * .022), r = Math.max(8, cell * .07);
-  const off = k => { const a = ALL.indexOf(k) * 2.4, m = cell * .1; return { x:Math.cos(a)*m, y:Math.sin(a)*m }; };   // units get slightly different lanes
-  const ctr = (i, k) => { const el = cells[i], o = off(k); return { x:el.offsetLeft + el.offsetWidth/2 + o.x, y:el.offsetTop + el.offsetHeight/2 + o.y }; };
-  LINES = lines.map(l => { const key = l.k + ':' + l.j; return { ...l, key, p1:ctr(l.from, l.k), p2:ctr(l.to, l.k), bright:focused(l.k) || hoverLine===key || hoverCell===l.to }; });
+  const cell = cells[0].offsetWidth, lw = Math.max(1.4, cell * .016), r = Math.max(8, cell * .07), W0 = $wrap0.getBoundingClientRect();
+  const mid = el => { const c = el.getBoundingClientRect(); return { x:c.left - W0.left + c.width/2, y:c.top - W0.top + c.height/2 }; };
+  const sqc = i => ({ x:cells[i].offsetLeft + cells[i].offsetWidth/2, y:cells[i].offsetTop + cells[i].offsetHeight/2 });
+  // the icon of unit k standing on square sq (its ghost for that stop when it has moved, else its real token); the square centre if none is drawn
+  const iconAt = (k, sq, moved) => {
+    const c = cells[sq], g = [...c.querySelectorAll(`.gh[data-g="${k}"]`)].filter(e => +e.dataset.idx <= moved).pop() || c.querySelector(`.gh[data-g="${k}"]`), t = c.querySelector(`.tok[data-u="${k}"]`);
+    const el = moved > 0 ? (g || t) : (t || g);
+    return el ? mid(el) : sqc(sq);
+  };
+  LINES = lines.map(l => {
+    const key = l.k + ':' + l.j, foes = isPlayer(l.k) ? ENEMIES : PLAYERS;
+    const hit = foes.filter(u => alive(S,u) && posAt(u, l.j)===l.to), u2 = hit.includes(l.tgt) ? l.tgt : hit[0];      // who will be standing there when it fires
+    const p1 = iconAt(l.k, l.from, l.moved);
+    const p2 = u2 ? iconAt(u2, l.to, posAt(u2, l.j)!==S[u2].pos ? 99 : 0) : sqc(l.to);
+    // the shot flies in a parabola-like arc that bends upward (a quadratic curve with its control point lifted above the middle); near-vertical shots bulge sideways instead
+    const dx = p2.x-p1.x, dy = p2.y-p1.y, len = Math.hypot(dx, dy) || 1, hgt = Math.min(Math.max(len*.3, cell*.2), cell*1.2), mx = (p1.x+p2.x)/2, my = (p1.y+p2.y)/2;
+    const c = Math.abs(dx) >= len*.3 ? { x:mx, y:my - hgt } : { x:mx + hgt, y:my };
+    const pts = Array.from({ length:41 }, (_, q) => { const t = q/40; return { x:(1-t)*(1-t)*p1.x + 2*(1-t)*t*c.x + t*t*p2.x, y:(1-t)*(1-t)*p1.y + 2*(1-t)*t*c.y + t*t*p2.y }; });
+    return { ...l, key, p1, p2, pts, bright:focused(l.k) || hoverLine===key || hoverCell===l.to };
+  });
   const order = [...LINES.filter(l => !l.bright), ...LINES.filter(l => l.bright)];
   svg.innerHTML = order.map(l => {
-    const col = COL[l.k], b = l.bright, dx = l.p2.x-l.p1.x, dy = l.p2.y-l.p1.y, len = Math.hypot(dx, dy) || 1, ux = dx/len, uy = dy/len;
-    const q = { x:l.p2.x - ux*Math.min(cell*.4, len*.45), y:l.p2.y - uy*Math.min(cell*.4, len*.45) };
-    return `<g${b ? ` style="filter:drop-shadow(0 0 4px ${col})"` : ''}>`
-      + `<line x1="${l.p1.x}" y1="${l.p1.y}" x2="${l.p2.x}" y2="${l.p2.y}" stroke="${col}" stroke-width="${b ? lw*2.2 : lw}" stroke-linecap="round" opacity="${b ? 1 : .32}"/>`
-      + `<circle cx="${l.p2.x}" cy="${l.p2.y}" r="${cell*.055}" fill="none" stroke="${col}" stroke-width="${b ? lw*2 : lw*1.2}" opacity="${b ? 1 : .6}"/>`
-      + `<circle cx="${q.x}" cy="${q.y}" r="${r}" fill="${col}" stroke="#10131a" stroke-width="2" opacity="${b ? 1 : .8}"/>`
-      + `<text x="${q.x}" y="${q.y}" font-size="${r*1.25}" font-weight="800" fill="#10131a" text-anchor="middle" dominant-baseline="central">${l.n}</text></g>`;
+    const col = COL[l.k], b = l.bright, pts = l.pts, d2 = (a, c) => Math.hypot(a.x-c.x, a.y-c.y);
+    const R = cell*.1, h = cell*.07, sw = b ? lw*1.5 : lw, op = b ? 1 : .4, gap = cell*.11;
+    let i0 = 0; while (i0 < 40 && d2(pts[i0], l.p1) < gap) i0++;                  // start just outside the shooter's icon
+    let i1 = 40; while (i1 > 0 && d2(pts[i1], l.p2) < R) i1--;                    // the arrow tip touches the crosshair ring
+    let ib = i1; while (ib > 0 && d2(pts[ib], pts[i1]) < h*.9) ib--;              // the dashed line ends where the arrowhead starts
+    const tip = pts[i1], pv = pts[Math.max(0, i1-2)], tl = d2(tip, pv) || 1, ux = (tip.x-pv.x)/tl, uy = (tip.y-pv.y)/tl, px = -uy, py = ux;
+    const path = i0 < ib ? 'M' + pts.slice(i0, ib+1).map(p => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' L') : '';
+    return `<g>`
+      + (path ? `<path d="${path}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-dasharray="${lw*3.2} ${lw*2.6}" opacity="${b ? .95 : .4}"/>` : '')
+      + `<polygon points="${tip.x},${tip.y} ${tip.x-ux*h+px*h*.6},${tip.y-uy*h+py*h*.6} ${tip.x-ux*h-px*h*.6},${tip.y-uy*h-py*h*.6}" fill="${col}" opacity="${op}"/>`
+      + `<circle cx="${l.p2.x}" cy="${l.p2.y}" r="${R}" fill="none" stroke="${col}" stroke-width="${sw}" opacity="${op}"/>`
+      + [[1,0],[-1,0],[0,1],[0,-1]].map(([cx, cy]) => `<line x1="${l.p2.x+cx*R*.55}" y1="${l.p2.y+cy*R*.55}" x2="${l.p2.x+cx*R*1.35}" y2="${l.p2.y+cy*R*1.35}" stroke="${col}" stroke-width="${sw}" opacity="${op}"/>`).join('')
+      + `</g>`;
   }).join('');
 }
 const setShowAll = v => { showAll = v; $('showall').classList.toggle('on', v); drawPlans(); };
@@ -696,7 +777,7 @@ $wrap0.addEventListener('mousemove', e => {                                    /
   if (phase !== 'plan' || !LINES.length){ if (hoverLine){ hoverLine = null; drawPlans(); } return; }
   const r = $wrap0.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
   let best = null, bd = 8;
-  for (const l of LINES){ const d = segDist(x, y, l.p1, l.p2); if (d < bd){ bd = d; best = l.key; } }
+  for (const l of LINES){ for (let q = 1; q < l.pts.length; q++){ const d = segDist(x, y, l.pts[q-1], l.pts[q]); if (d < bd){ bd = d; best = l.key; } } }
   if (best !== hoverLine){ hoverLine = best; drawPlans(); }
 });
 $wrap0.addEventListener('mouseleave', () => { if (hoverLine){ hoverLine = null; drawPlans(); } });
@@ -736,19 +817,14 @@ function paintTrack(i){
 
 function render(flash=[], trail=[]){
   const planning = phase==='plan';
-  if (planning && sel && !alive(S, sel)) sel = PLAYERS.find(p => alive(S,p));
-  const badges = {};
-  if (planning){ for (const k of ENEMIES) if (alive(S,k)) planBadges(foePlans[k], S[k].pos, k, badges);
-                 for (const p of PLAYERS) if (alive(S,p)) planBadges(myPlans[p], S[p].pos, p, badges); }
+  if (planning && sel && !alive(S, sel)){ const old = sel; sel = PLAYERS.find(p => alive(S,p)); if (picked===old) picked = sel; }
   const ppos = planning && sel ? projPos(myPlans[sel], S[sel].pos) : -1;
   [...board.children].forEach((el,i) => {
     const can = canCell(i);
     el.className = 'cell' + (can ? ' can' : '') + (flash.includes(i) ? ' flash' : '');
     const here = ALL.filter(k => alive(S,k) && S[k].pos===i);
     el.innerHTML = `<span class="name">${cname(i)}</span>`
-      + `<div class="lane rlane solo">${here.map(k => `<span class="tok${planning && k===sel && PLAYERS.length>1 ? ' sel' : ''}" data-u="${k}" style="--c:${COL[k]}">${UNITS[k].tok}${S[k].g?'<i class="shield">🛡️</i>':''}</span>`).join('')}</div>`
-      + `<div class="lane glane"></div>`
-      + `<span class="badges">${(badges[i]||[]).join('')}</span>`
+      + `<div class="stack"><div class="sc sa">${here.filter(isPlayer).map(k => `<span class="tok${planning && k===picked ? ' sel' : ''}" data-u="${k}" style="--c:${COL[k]}"><b class="ic">${UNITS[k].tok}${S[k].g?'<i class="shield">🛡️</i>':''}</b></span>`).join('')}</div><div class="sc se">${here.filter(isEnemy).map(k => `<span class="tok${planning && k===picked ? ' sel' : ''}" data-u="${k}" style="--c:${COL[k]}"><b class="ic">${UNITS[k].tok}${S[k].g?'<i class="shield">🛡️</i>':''}</b></span>`).join('')}</div></div>`
       + (can && (mode==='ranged' || mode==='move') ? `<span class="cost">${can} AP</span>` : '')
       + (planning && mode==='move' && !can && !pending && sel && i!==ppos && dist(ppos, i) <= left(myPlans[sel], sel) && squareFull(i) ? '<span class="cost" style="color:#ff5c6c">full</span>' : '');
   });
@@ -763,7 +839,8 @@ function render(flash=[], trail=[]){
     $('m_'+k).textContent = alive(S,k) ? `HP ${S[k].hp}/${maxHp}${S[k].g?' · 🛡':''}` : 'Defeated';
     $('ap_'+k).innerHTML = alive(S,k) ? `AP ${pips(plan ? left(plan, k) : apOf(k), k)}${S[k].earn ? ' <span class="bpip pop" title="+1 AP next round">+●</span>' : ''}` : '';          // AP left to plan (enemies show what their plan spends)
     $('side_'+k).classList.toggle('dead', !alive(S,k));
-    $('side_'+k).classList.toggle('on', planning && k===sel);
+    $('side_'+k).classList.toggle('on', planning && k===picked);
+    $('side_'+k).classList.toggle('ord', planning && k===sel);
   }
   const apLeft = sel && myPlans[sel] ? left(myPlans[sel], sel) : 0;
   document.querySelectorAll('button.act').forEach(b => {
@@ -801,15 +878,14 @@ function afterAttack(){
 function afterAction(){
   if (left(myPlans[sel], sel) > 0 || pending) return;
   const next = PLAYERS.filter(p => alive(S,p) && left(myPlans[p], p) > 0);
-  if (next.length){ const at = PLAYERS.indexOf(sel); sel = next.find(p => PLAYERS.indexOf(p) > at) || next[0]; }
+  if (next.length){ const at = PLAYERS.indexOf(sel), old = sel; sel = next.find(p => PLAYERS.indexOf(p) > at) || next[0]; if (picked===old) picked = sel; }
 }
 function onCell(i, ev){
   if (phase==='plan' && !mode && !pending){          // click a character (token or ghost) to pin its full plan; a player token also selects it; click again to release
     const tk = ev && ev.target.closest ? ev.target.closest('[data-u],[data-g]') : null, who = tk ? (tk.dataset.u || tk.dataset.g) : null;
-    if (who && isEnemy(who)){ pinU = pinU===who ? null : who; drawPlans(); return; }
-    if (who && isPlayer(who) && alive(S,who)){ if (sel===who) pinU = pinU===who ? null : who; else { sel = who; pinU = who; } render(); return; }
+    if (who && alive(S,who)){ pick(who); return; }
     const here = PLAYERS.filter(p => alive(S,p) && S[p].pos===i);
-    if (here.length){ sel = here[(here.indexOf(sel) + 1) % here.length]; pinU = sel; render(); return; }
+    if (here.length){ sel = here[(here.indexOf(sel) + 1) % here.length]; picked = sel; render(); return; }
   }
   const c = canCell(i); if (!c) return;
   if (mode==='move') myPlans[sel].push(mk('move',{to:i, cost:c}));
@@ -885,6 +961,12 @@ function sparkAnim(cell){
   const { x, y } = center(cell), el = document.createElement('div');
   el.className = 'fx-spark'; el.textContent = '💥'; el.style.left = x+'px'; el.style.top = y+'px';
   return fxAdd(el, 650);
+}
+function guardAnim(k, cell){
+  const { x, y } = unitCenter(k, cell), el = document.createElement('div');
+  el.className = 'fx-guard'; el.style.left = x+'px'; el.style.top = y+'px';
+  el.innerHTML = '<span class="gs">🛡️</span><span class="gb">💥</span>';
+  return fxAdd(el, 800);
 }
 // ---- Sword clash minigame (played inside the battle map) ----
 const MOUSE = side => `<svg viewBox="0 0 20 28"><rect x="1" y="1" width="18" height="26" rx="9" fill="none" stroke="#8d97ab" stroke-width="1.5"/>`
@@ -970,6 +1052,7 @@ function playFx(st){
     else if (a.t==='ranged') jobs.push(shootAnim(k, st.mid[k].pos, a.at));
   }
   for (const c of st.clashes) jobs.push(sleep(250).then(() => sparkAnim(c.cell)));
+  for (const k of st.blocked || []) jobs.push(sleep(380).then(() => guardAnim(k, st.mid[k].pos)));   // a guard that really blocked a hit
   return Promise.all(jobs);
 }
 
@@ -1037,7 +1120,7 @@ async function battle(){
 async function newRound(){
   phase = 'ai'; mode = null; pending = null; myPlans = {}; foePlans = {};
   PLAYERS.forEach(p => myPlans[p] = []); ENEMIES.forEach(e => foePlans[e] = []);
-  sel = PLAYERS.find(p => alive(S,p));
+  sel = PLAYERS.find(p => alive(S,p)); picked = sel;
   say('The enemies are planning…'); render();
   await sleep(30);                                // let the screen update before the AI thinks
   for (const k of ENEMIES) if (alive(S,k)) foePlans[k] = aiPlan(S, k, foePlans);
